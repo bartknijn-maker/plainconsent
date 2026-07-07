@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PlainConsent: the plain cookie banner</title>
+<meta name="description" content="A cookie consent manager with nothing to hide. One script, no dark patterns, no per-pageview pricing. GDPR-ready consent with an audit trail, live in minutes on any CMS.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f7f3ec;
+    --paper-deep:#efe8dc;
+    --ink:#1b1712;
+    --ink-soft:#5c5347;
+    --rule:#d8cfc0;
+    --stamp:#b3402a;
+    --stamp-soft:#b3402a22;
+    --serif:"Fraunces",Georgia,serif;
+    --mono:"IBM Plex Mono",ui-monospace,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--serif);
+    font-weight:300;
+    line-height:1.6;
+    font-size:17px;
+    position:relative;
+  }
+  /* papierkorrel */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:1000;opacity:.5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .sheet{max-width:880px;margin:0 auto;padding:0 28px}
+  .mono{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+
+  /* ---------- top ---------- */
+  header{padding:34px 0 0}
+  .masthead{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--ink);padding-bottom:14px}
+  .wordmark{font-weight:900;font-size:1.15rem;letter-spacing:-.01em}
+  .wordmark span{color:var(--stamp)}
+  nav a{color:var(--ink-soft);text-decoration:none;font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;margin-left:22px}
+  nav a:hover{color:var(--stamp)}
+
+  /* ---------- hero ---------- */
+  .hero{padding:96px 0 72px;position:relative}
+  .hero h1{
+    font-size:clamp(2.6rem,7.5vw,5.4rem);
+    font-weight:900;line-height:1.02;letter-spacing:-.02em;
+    max-width:12ch;
+  }
+  .hero h1 em{font-style:italic;font-weight:300}
+  .hero p.lede{margin-top:30px;max-width:52ch;font-size:1.18rem;color:var(--ink-soft)}
+  .hero .actions{margin-top:40px;display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+  .btn{
+    font-family:var(--mono);font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;
+    padding:15px 26px;border:1.5px solid var(--ink);color:var(--ink);
+    text-decoration:none;background:transparent;cursor:pointer;
+    transition:all .18s ease;display:inline-block;
+  }
+  .btn:hover{background:var(--ink);color:var(--paper)}
+  .btn.primary{background:var(--stamp);border-color:var(--stamp);color:var(--paper)}
+  .btn.primary:hover{background:var(--ink);border-color:var(--ink)}
+  /* stempel */
+  .stamp{
+    position:absolute;right:8px;top:80px;width:150px;height:150px;
+    border:2.5px solid var(--stamp);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    transform:rotate(11deg);color:var(--stamp);
+    font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;
+    line-height:1.7;opacity:.85;
+    mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.5' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .92 0'/%3E%3C/filter%3E%3Crect width='90' height='90' filter='url(%23r)'/%3E%3C/svg%3E");
+  }
+  @media(max-width:820px){.stamp{display:none}}
+
+  /* ---------- clauses ---------- */
+  section{padding:64px 0;border-top:1px solid var(--rule)}
+  .kicker{margin-bottom:36px}
+  .kicker h2{font-weight:600;font-size:1.7rem;letter-spacing:-.01em;margin-top:6px}
+  ol.clauses{list-style:none;counter-reset:clause}
+  ol.clauses li{
+    counter-increment:clause;
+    display:grid;grid-template-columns:70px 1fr;gap:18px;
+    padding:26px 0;border-bottom:1px dashed var(--rule);
+  }
+  ol.clauses li::before{
+    content:counter(clause,decimal-leading-zero) ".";
+    font-family:var(--mono);color:var(--stamp);font-size:.85rem;padding-top:5px;
+  }
+  ol.clauses h3{font-weight:600;font-size:1.12rem;margin-bottom:6px}
+  ol.clauses p{color:var(--ink-soft);max-width:58ch}
+  ol.clauses .note{font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;color:var(--stamp);text-transform:uppercase;margin-top:8px;display:inline-block}
+
+  /* ---------- demo ---------- */
+  .demo-box{
+    background:var(--paper-deep);border:1px solid var(--rule);padding:44px 36px;
+    display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between;
+  }
+  .demo-box p{max-width:44ch;color:var(--ink-soft)}
+  .demo-box .fallback{font-family:var(--mono);font-size:.7rem;color:var(--stamp);display:none;margin-top:10px}
+
+  /* ---------- team ---------- */
+  .ops{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule)}
+  .ops div{background:var(--paper);padding:26px 22px}
+  .ops .num{font-family:var(--mono);font-size:1.9rem;color:var(--stamp);display:block;margin-bottom:6px}
+  .ops .lbl{font-size:.95rem;color:var(--ink-soft)}
+
+  /* ---------- signature / CTA ---------- */
+  .signature{padding:88px 0 40px;text-align:left}
+  .signature h2{font-size:clamp(1.9rem,4.5vw,3rem);font-weight:900;letter-spacing:-.02em;max-width:18ch}
+  .signature p{margin-top:18px;color:var(--ink-soft);max-width:52ch}
+  .sigline{margin-top:44px;border-top:1px solid var(--ink);max-width:420px;padding-top:10px;display:flex;justify-content:space-between;align-items:center}
+
+  footer{border-top:1px solid var(--ink);margin-top:60px;padding:26px 0 50px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  footer a{color:var(--ink-soft)}
+
+  /* ---------- reveal ---------- */
+  .r{opacity:0;transform:translateY(14px);animation:up .7s cubic-bezier(.2,.7,.2,1) forwards}
+  .r2{animation-delay:.12s}.r3{animation-delay:.24s}.r4{animation-delay:.36s}
+  @keyframes up{to{opacity:1;transform:none}}
+  @media(prefers-reduced-motion:reduce){.r{animation:none;opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<header class="sheet">
+  <div class="masthead">
+    <div class="wordmark">Plain<span>Consent</span></div>
+    <nav>
+      <a href="#terms">The terms</a>
+      <a href="#demo">Live demo</a>
+      <a href="#team">The maker</a>
+      <a href="#access">Early access</a>
+    </nav>
+  </div>
+</header>
+
+<main class="sheet">
+
+  <div class="hero">
+    <div class="stamp">Nothing<br>to hide<br>&#10003;</div>
+    <p class="mono r">A declaration, in plain language</p>
+    <h1 class="r r2">The cookie banner with <em>nothing to hide.</em></h1>
+    <p class="lede r r3">Cookie consent tools became the thing they were meant to protect people from: bloated, tracking-heavy, and priced by the pageview. PlainConsent is one small script that asks politely, remembers the answer, and can prove it. That is the whole product.</p>
+    <div class="actions r r4">
+      <a class="btn primary" href="#access">Get early access</a>
+      <button class="btn" id="demo-btn" type="button">Preview the banner</button>
+    </div>
+  </div>
+
+  <section id="terms">
+    <div class="kicker">
+      <span class="mono">Article I</span>
+      <h2>The terms, stated plainly</h2>
+    </div>
+    <ol class="clauses">
+      <li>
+        <div>
+          <h3>One script. Zero dependencies.</h3>
+          <p>A single ES5 file that runs everywhere, injects its own styling, and calls no third-party servers. Your visitors' data never leaves your page to ask whether it may be collected.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>No dark patterns.</h3>
+          <p>Accept and decline carry equal weight. Granular per-category toggles, a re-open link for changed minds, and re-consent when your policy actually changes. Consent that would hold up in a conversation, not just in court.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Proof, not promises.</h3>
+          <p>Every fresh decision gets a unique consent ID and a standardised audit record you can log to your own endpoint. Built for GDPR Article 7: the burden of proof is yours, so the receipts are too.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Speaks five languages.</h3>
+          <p>English, Dutch, German, Spanish and French built in, with full text overrides if you would rather phrase things your own way.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Configured in minutes.</h3>
+          <p>A config generator produces your settings and embed snippet. Google Tag Manager integration sets consent defaults to denied before anything loads.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>No per-pageview pricing. And a price promise.</h3>
+          <p>One flat price. Your traffic growing is good news, not a billing event. And if you find a comparable paid consent manager for less, we will beat that price by 10 percent. In writing.</p>
+          <span class="note">EU-only display mode: on the roadmap</span>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section id="demo">
+    <div class="kicker">
+      <span class="mono">Article II</span>
+      <h2>See it, on this very page</h2>
+    </div>
+    <div class="demo-box">
+      <p>This page runs the real script, not a mockup. Press the button and the actual banner appears, with the actual toggles, exactly as your visitors would see it.</p>
+      <button class="btn primary" type="button" data-cookie-consent="manage">Open the banner</button>
+      <span class="fallback" id="demo-fallback">Demo script not loaded in this preview. See the product repository.</span>
+    </div>
+  </section>
+
+  <section id="team">
+    <div class="kicker">
+      <span class="mono">Article III</span>
+      <h2>Small tool, serious engineering</h2>
+    </div>
+    <p style="max-width:60ch;color:var(--ink-soft)">PlainConsent is made by <a href="https://bartknijnenberg.com" style="color:var(--ink)">Bart Knijnenberg</a>. It stays small on purpose, and it ships like it matters: every change passes a full test suite, an independent security review and a mechanical quality gate before release. No exceptions.</p>
+    <div class="ops" style="margin-top:34px">
+      <div><span class="num" id="stat-tests">92</span><span class="lbl">automated tests on every change</span></div>
+      <div><span class="num">8/8</span><span class="lbl">quality gates required before release</span></div>
+      <div><span class="num">2</span><span class="lbl">independent reviews per release</span></div>
+      <div><span class="num">0</span><span class="lbl">third-party calls made by the script</span></div>
+    </div>
+  </section>
+
+  <section class="signature" id="access">
+    <span class="mono">Article IV, final</span>
+    <h2>Early access, for the early and curious.</h2>
+    <p>We are putting the finishing touches on hosted distribution and pricing. Founder terms for the first sites on board. One email, no sequence, no funnel.</p>
+    <div class="sigline">
+      <span class="mono">Signed,</span>
+      <a class="btn primary" href="mailto:info@bartknijnenberg.com?subject=PlainConsent%20early%20access">Request early access</a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="sheet">
+  <span class="mono">PlainConsent</span>
+  <span class="mono"><a href="https://bartknijnenberg.com">bartknijnenberg.com</a></span>
+</footer>
+
+<!-- Het echte product, als live demo. Pad klopt binnen de repo-structuur
+     (site/ naast product/); bij deploy naar het definitieve domein wordt dit
+     de gehoste dist-versie (backlog item 9). -->
+<script src="dist/cookie-consent.v1.0.0.js"></script>
+<script>
+  (function () {
+    var loaded = typeof window.CookieConsent === 'object' && window.CookieConsent;
+    var fallback = document.getElementById('demo-fallback');
+    if (!loaded) {
+      if (fallback) fallback.style.display = 'inline';
+      return;
+    }
+    // Demo-init: geen GTM, eigen consentVersion, banner niet automatisch tonen
+    // bij bestaand consent. De "manage"-knoppen heropenen hem altijd.
+    window.CookieConsent.init({
+      autoLoadGTM: false,
+      consentVersion: 1,
+      locale: 'en'
+    });
+    var btn = document.getElementById('demo-btn');
+    if (btn) btn.addEventListener('click', function () { window.CookieConsent.show(); });
+  })();
+</script>
+</body>
+</html>

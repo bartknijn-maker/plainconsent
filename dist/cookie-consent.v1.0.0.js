@@ -1,0 +1,873 @@
+/*! Cookie Consent Manager v1.0.0 | bron: cookie-consent.js (PlainConsent product-core) */
+/**
+ * Cookie Consent Manager — PRODUCT core (multi-tenant, config-driven)
+ *
+ * Commerciële versie van de CMP die oorspronkelijk voor bartknijnenberg.com is
+ * gebouwd. Waar de single-site versie alles hardcodeerde, is dit een config-driven
+ * core die per klant (tenant) geconfigureerd wordt — de basis voor een verkoopbaar
+ * Cookiebot-alternatief.
+ *
+ * Gebruik (browser):
+ *   <script src="cookie-consent.js"></script>
+ *   <script>CookieConsent.init({ gtmId: 'GTM-XXXX', consentVersion: 2, ... });</script>
+ *
+ * Gebruik (test/node):
+ *   const CC = require('./cookie-consent.js');
+ *   CC._internals.needsReconsent(stored, 2)
+ *
+ * Pure logica (detectLanguage, needsReconsent, (de)serialiseren) raakt geen DOM en
+ * is daardoor in node testbaar; DOM-rendering draait alleen in de browser.
+ */
+(function (root, factory) {
+  'use strict';
+  var api = factory();
+  if (typeof module === 'object' && module.exports) {
+    module.exports = api;            // node / test
+  } else {
+    root.CookieConsent = api;         // browser
+  }
+})(typeof window !== 'undefined' ? window : (typeof self !== 'undefined' ? self : this), function () {
+  'use strict';
+
+  var VERSION = '1.0.0';
+  var DANGEROUS_KEYS = { '__proto__': 1, 'constructor': 1, 'prototype': 1 };
+
+  /** Veilige URL voor een href: alleen relatief (/) of expliciet https://.
+   *  Een protocol-relatieve URL (//host) wordt geweigerd: die zou op een https-
+   *  pagina naar https://host resolven (data-exfiltratie naar een willekeurige
+   *  host), terwijl een echte relatieve URL maar EEN leidende slash heeft. */
+  function isSafeUrl(url) {
+    if (typeof url !== 'string' || !url) return false;
+    if (url.charAt(0) === '/') return url.charAt(1) !== '/';  // '/pad' ok, '//host' niet
+    return /^https:\/\//i.test(url);
+  }
+
+  /** Geldige GTM-container-id (voorkomt injectie van willekeurige URLs). */
+  function isValidGtmId(id) {
+    return typeof id === 'string' && /^GTM-[A-Z0-9]+$/i.test(id);
+  }
+
+  /** Veilige https-script-bron voor een marketingpixel. */
+  function isSafePixelSrc(src) {
+    return typeof src === 'string' && /^https:\/\//i.test(src);
+  }
+
+  // Kleine whitelist van CSS-kleurkeywords die we expliciet toestaan.
+  var SAFE_COLOR_KEYWORDS = {
+    'transparent': 1, 'white': 1, 'black': 1, 'currentcolor': 1, 'inherit': 1
+  };
+
+  /**
+   * Veilige CSS-kleur voor tenant-gedreven theming. Voorkomt CSS-injectie:
+   * accepteert ALLEEN hex (#rgb, #rgba, #rrggbb, #rrggbbaa), rgb()/rgba() met
+   * numerieke argumenten, en een kleine whitelist van keywords. Alles anders
+   * (bv. 'red;}body{display:none', '</style>', 'url(...)', 'expression(...)',
+   * 'javascript:') wordt geweigerd zodat de caller terugvalt op de default.
+   */
+  function isSafeColor(value) {
+    if (typeof value !== 'string') return false;
+    var v = value.trim();
+    if (!v) return false;
+    // hex: 3, 4, 6 of 8 hex-tekens
+    if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(v)) return true;
+    // rgb(r,g,b): 3 numerieke argumenten
+    if (/^rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)$/.test(v)) return true;
+    // rgba(r,g,b,a): 3 ints + 1 alpha (int of decimaal)
+    if (/^rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*(0|1|0?\.\d+)\s*\)$/.test(v)) return true;
+    // whitelist-keyword (case-insensitive)
+    if (Object.prototype.hasOwnProperty.call(SAFE_COLOR_KEYWORDS, v.toLowerCase())) return true;
+    return false;
+  }
+
+  /** Pak een gevalideerde kleur uit theme[key], anders de DEFAULTS-waarde. */
+  function safeThemeColor(theme, key) {
+    var fallback = DEFAULTS.theme[key];
+    if (theme && isSafeColor(theme[key])) return theme[key];
+    return fallback;
+  }
+
+  /**
+   * Bouw de scoped CSS-string voor de widget (gedreven door config.theme).
+   * Alle kleuren lopen door isSafeColor; onveilige waarden vallen terug op
+   * DEFAULTS.theme. De CSS wordt uitsluitend uit gevalideerde waarden opgebouwd,
+   * zodat een aanvaller-gestuurde theme-waarde nooit verbatim in de output komt.
+   * Selectors zijn ge-prefixed met cc- (matcht renderBanner).
+   */
+  function buildStyleCss(theme) {
+    var accent = safeThemeColor(theme, 'accent');
+    var bg = safeThemeColor(theme, 'bg');
+    var text = safeThemeColor(theme, 'text');
+    return [
+      '#cc-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;',
+      'display:flex;align-items:flex-end;justify-content:center;padding:16px;',
+      'animation:cc-fadeIn 0.3s ease;backdrop-filter:blur(2px);',
+      "font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;}",
+      '#cc-overlay.cc-hiding{animation:cc-fadeOut 0.3s ease forwards;}',
+      '#cc-banner{width:100%;max-width:520px;background:', bg, ';',
+      'border:1px solid rgba(255,255,255,0.1);border-radius:16px;',
+      'box-shadow:0 -4px 40px rgba(0,0,0,0.4);overflow:hidden;',
+      'animation:cc-slideUp 0.3s ease;}',
+      '#cc-overlay.cc-hiding #cc-banner{animation:cc-slideDown 0.3s ease forwards;}',
+      '.cc-inner{padding:28px 28px 20px;}',
+      '#cc-banner h2{font-size:20px;font-weight:700;color:', text, ';',
+      'margin:0 0 8px;line-height:1.3;}',
+      '#cc-banner p{font-size:14px;font-weight:400;color:', text, ';opacity:0.7;',
+      'margin:0 0 20px;line-height:1.6;}',
+      '.cc-actions{display:flex;gap:10px;margin-bottom:4px;}',
+      '#cc-accept,#cc-reject{font-size:14px;font-weight:600;padding:10px 20px;',
+      'border:none;border-radius:8px;cursor:pointer;transition:all 0.15s ease;',
+      'flex:1;text-align:center;}',
+      '#cc-accept{background:', accent, ';color:', text, ';}',
+      '#cc-accept:hover{transform:translateY(-1px);filter:brightness(0.92);}',
+      '#cc-reject{background:rgba(255,255,255,0.1);color:', text, ';',
+      'border:1px solid rgba(255,255,255,0.2);}',
+      '#cc-reject:hover{transform:translateY(-1px);background:rgba(255,255,255,0.15);}',
+      '#cc-banner input[type="checkbox"]:checked{accent-color:', accent, ';}',
+      '#cc-customize{font-size:14px;font-weight:600;padding:10px 20px;',
+      'border:1px solid rgba(255,255,255,0.2);border-radius:8px;cursor:pointer;',
+      'transition:all 0.15s ease;flex:1;text-align:center;',
+      'background:rgba(255,255,255,0.1);color:', text, ';}',
+      '#cc-customize:hover{transform:translateY(-1px);background:rgba(255,255,255,0.15);}',
+      '#cc-save{font-size:14px;font-weight:600;padding:10px 20px;border:none;',
+      'border-radius:8px;cursor:pointer;transition:all 0.15s ease;flex:1;',
+      'text-align:center;background:', accent, ';color:', text, ';}',
+      '#cc-save:hover{transform:translateY(-1px);filter:brightness(0.92);}',
+      '.cc-categories{margin:0 0 16px;}',
+      '.cc-category{display:flex;align-items:flex-start;gap:12px;padding:12px 0;',
+      'border-top:1px solid rgba(255,255,255,0.06);}',
+      '.cc-category:first-child{border-top:none;}',
+      '.cc-category-body{flex:1;}',
+      '.cc-category-label{font-size:14px;font-weight:600;color:', text, ';',
+      'margin:0 0 2px;display:block;}',
+      '.cc-category-desc{font-size:12px;font-weight:400;color:', text, ';',
+      'opacity:0.6;margin:0;line-height:1.5;}',
+      '.cc-category input[type="checkbox"]{width:18px;height:18px;margin-top:2px;',
+      'cursor:pointer;flex-shrink:0;}',
+      '.cc-category input[type="checkbox"]:disabled{cursor:not-allowed;opacity:0.5;}',
+      '.cc-footer{text-align:center;margin-top:16px;padding-top:12px;',
+      'border-top:1px solid rgba(255,255,255,0.06);}',
+      '.cc-footer a{font-size:12px;color:', text, ';opacity:0.5;text-decoration:none;}',
+      '.cc-footer a:hover{opacity:0.8;text-decoration:underline;}',
+      '@keyframes cc-fadeIn{from{opacity:0;}to{opacity:1;}}',
+      '@keyframes cc-fadeOut{from{opacity:1;}to{opacity:0;}}',
+      '@keyframes cc-slideUp{from{transform:translateY(20px);opacity:0;}to{transform:translateY(0);opacity:1;}}',
+      '@keyframes cc-slideDown{from{transform:translateY(0);opacity:1;}to{transform:translateY(20px);opacity:0;}}',
+      '@media (max-width:480px){',
+      '#cc-overlay{padding:8px;align-items:flex-end;}',
+      '#cc-banner{border-radius:14px 14px 0 0;max-width:100%;}',
+      '.cc-inner{padding:22px 18px 16px;}',
+      '#cc-banner h2{font-size:18px;}',
+      '.cc-actions{flex-direction:column;}',
+      '#cc-accept,#cc-reject,#cc-customize,#cc-save{padding:12px 20px;}',
+      '}'
+    ].join('');
+  }
+
+  // ============================================================
+  // I18N: ingebouwde vertaal-tabellen (item 7)
+  // ============================================================
+  // Alle user-facing banner-strings per taal. De 'en'- en 'nl'-tabellen zijn
+  // byte-voor-byte gelijk aan de oorspronkelijke DEFAULTS.translations
+  // (backwards compat). Elke taal heeft exact dezelfde keys als 'en';
+  // resolveTexts() gebruikt 'en' bovendien als vangnet zodat een key nooit
+  // kan ontbreken in de render-laag.
+  var I18N = {
+    en: {
+      title: 'We value your privacy',
+      description: 'We use cookies to improve your experience, analyze traffic, and for marketing. Choose which cookies to accept.',
+      acceptAll: 'Accept all', rejectAll: 'Reject all', customize: 'Customize',
+      savePreferences: 'Save preferences', privacyLink: 'Privacy Policy',
+      necessary: 'Necessary', necessaryDesc: 'Essential for the website to function. Cannot be disabled.',
+      analytics: 'Analytics', analyticsDesc: 'Help us understand how visitors use our website.',
+      marketing: 'Marketing', marketingDesc: 'Used to deliver relevant ads and measure campaigns.'
+    },
+    nl: {
+      title: 'We waarderen je privacy',
+      description: 'We gebruiken cookies om je ervaring te verbeteren, verkeer te analyseren en voor marketing. Kies welke cookies je accepteert.',
+      acceptAll: 'Alles accepteren', rejectAll: 'Alles weigeren', customize: 'Aanpassen',
+      savePreferences: 'Voorkeuren opslaan', privacyLink: 'Privacybeleid',
+      necessary: 'Noodzakelijk', necessaryDesc: 'Essentieel voor de werking van de website. Kan niet uitgeschakeld worden.',
+      analytics: 'Analyse', analyticsDesc: 'Helpen ons begrijpen hoe bezoekers de website gebruiken.',
+      marketing: 'Marketing', marketingDesc: 'Gebruikt om relevante advertenties te tonen en campagnes te meten.'
+    },
+    de: {
+      title: 'Ihre Privatsphäre ist uns wichtig',
+      description: 'Wir verwenden Cookies, um Ihr Nutzererlebnis zu verbessern, den Datenverkehr zu analysieren und für Marketingzwecke. Wählen Sie, welche Cookies Sie akzeptieren möchten.',
+      acceptAll: 'Alle akzeptieren', rejectAll: 'Alle ablehnen', customize: 'Anpassen',
+      savePreferences: 'Einstellungen speichern', privacyLink: 'Datenschutzerklärung',
+      necessary: 'Notwendig', necessaryDesc: 'Erforderlich für den Betrieb der Website. Kann nicht deaktiviert werden.',
+      analytics: 'Analyse', analyticsDesc: 'Helfen uns zu verstehen, wie Besucher unsere Website nutzen.',
+      marketing: 'Marketing', marketingDesc: 'Werden verwendet, um relevante Werbung anzuzeigen und Kampagnen zu messen.'
+    },
+    es: {
+      title: 'Su privacidad es importante para nosotros',
+      description: 'Utilizamos cookies para mejorar su experiencia, analizar el tráfico y con fines de marketing. Elija qué cookies desea aceptar.',
+      acceptAll: 'Aceptar todas', rejectAll: 'Rechazar todas', customize: 'Personalizar',
+      savePreferences: 'Guardar preferencias', privacyLink: 'Política de privacidad',
+      necessary: 'Necesarias', necessaryDesc: 'Esenciales para el funcionamiento del sitio web. No se pueden desactivar.',
+      analytics: 'Análisis', analyticsDesc: 'Nos ayudan a entender cómo los visitantes utilizan nuestro sitio web.',
+      marketing: 'Marketing', marketingDesc: 'Se utilizan para mostrar anuncios relevantes y medir campañas.'
+    },
+    fr: {
+      title: 'Votre vie privée compte pour nous',
+      description: 'Nous utilisons des cookies pour améliorer votre expérience, analyser le trafic et à des fins marketing. Choisissez les cookies que vous souhaitez accepter.',
+      acceptAll: 'Tout accepter', rejectAll: 'Tout refuser', customize: 'Personnaliser',
+      savePreferences: 'Enregistrer les préférences', privacyLink: 'Politique de confidentialité',
+      necessary: 'Nécessaires', necessaryDesc: 'Indispensables au fonctionnement du site. Ne peuvent pas être désactivés.',
+      analytics: 'Statistiques', analyticsDesc: 'Nous aident à comprendre comment les visiteurs utilisent notre site.',
+      marketing: 'Marketing', marketingDesc: 'Servent à diffuser des publicités pertinentes et à mesurer les campagnes.'
+    }
+  };
+
+  // ============================================================
+  // DEFAULT CONFIG — per tenant overschreven via init()
+  // ============================================================
+  var DEFAULTS = {
+    gtmId: null,
+    consentCookieName: 'cc_consent',
+    consentCookieDays: 365,
+    consentVersion: 1,            // verhoog na policy-wijziging -> forceert re-consent
+    enabled: true,
+    autoLoadGTM: true,
+    privacyUrl: '/privacy-policy',
+    defaultLanguage: 'en',
+    locale: null,                 // expliciete banner-taal: 'nl'|'en'|'de'|'es'|'fr'; null = pad-detectie
+    texts: null,                  // per-key override van de opgeloste teksten (wint van de tabellen)
+    // pad-prefixes die een taal forceren (eerste match wint)
+    languagePaths: { nl: ['/nl', '/nl-nl'] },
+    categories: ['necessary', 'analytics', 'marketing'],
+    marketingPixels: [],
+    theme: { accent: '#2563EB', bg: '#0D0D0D', text: '#FFFFFF' },
+    onConsent: null,             // callback(consent) na elke keuze
+    consentLogUrl: null,         // optioneel: audit-endpoint voor consent-bewijs (relatief / https)
+    translations: I18N           // per tenant uitbreidbaar/overschrijfbaar via mergeConfig
+  };
+
+  // ============================================================
+  // PURE LOGICA (DOM-vrij, node-testbaar)
+  // ============================================================
+
+  /** Diepe merge van tenant-config over de defaults (config wint). */
+  function mergeConfig(defaults, user) {
+    var out = {};
+    var k;
+    for (k in defaults) { if (Object.prototype.hasOwnProperty.call(defaults, k)) out[k] = defaults[k]; }
+    if (!user) return out;
+    for (k in user) {
+      if (!Object.prototype.hasOwnProperty.call(user, k)) continue;
+      if (DANGEROUS_KEYS[k]) continue;  // prototype-pollution-bescherming
+      var uv = user[k];
+      if (uv && typeof uv === 'object' && !Array.isArray(uv) &&
+          out[k] && typeof out[k] === 'object' && !Array.isArray(out[k])) {
+        out[k] = mergeConfig(out[k], uv);
+      } else {
+        out[k] = uv;
+      }
+    }
+    return out;
+  }
+
+  /** Detecteer taal uit een pad o.b.v. config.languagePaths; anders default. */
+  function detectLanguage(path, config) {
+    var paths = (config && config.languagePaths) || {};
+    var lower = String(path || '').toLowerCase();
+    for (var lang in paths) {
+      if (!Object.prototype.hasOwnProperty.call(paths, lang)) continue;
+      var prefixes = paths[lang] || [];
+      for (var i = 0; i < prefixes.length; i++) {
+        var pfx = String(prefixes[i]).toLowerCase();
+        if (lower.indexOf(pfx) === 0) {
+          // grens-check: '/nl' mag niet matchen op '/nlbloep'
+          var rest = lower.slice(pfx.length);
+          if (rest === '' || rest.charAt(0) === '/' || rest.charAt(0) === '?' || rest.charAt(0) === '#') {
+            return lang;
+          }
+        }
+      }
+    }
+    return (config && config.defaultLanguage) || 'en';
+  }
+
+  /** Kopieer own-properties van source naar target (prototype-pollution-veilig). */
+  function overlayTexts(target, source) {
+    for (var k in source) {
+      if (!Object.prototype.hasOwnProperty.call(source, k)) continue;
+      if (DANGEROUS_KEYS[k]) continue;  // prototype-pollution-bescherming
+      target[k] = source[k];
+    }
+    return target;
+  }
+
+  /**
+   * Pure lookup-helper (DOM-vrij, geen netwerk, geen auto-detectie): los alle
+   * user-facing banner-teksten op voor een config. Lagen, laatste wint:
+   *   1. ingebouwde 'en'-tabel (vangnet: volledige key-dekking, altijd)
+   *   2. ingebouwde I18N-tabel voor de gekozen locale
+   *   3. tenant-vertalingen uit config.translations[locale] (bestaand mechanisme)
+   *   4. config.texts: per-key override, wint altijd van de tabellen
+   *
+   * Locale-keuze: localeOverride (render-laag, bv. pad-detectie) > config.locale
+   * > 'en'. Lookup is case-insensitief ('NL' -> 'nl'). Een onbekende locale valt
+   * terug op 'en' met een console.warn, tenzij de tenant er zelf een vertaal-
+   * tabel voor meelevert via config.translations (dan is die gewoon geldig).
+   */
+  function resolveTexts(config, localeOverride) {
+    var cfg = (config && typeof config === 'object') ? config : {};
+    var requested = (localeOverride != null) ? localeOverride : cfg.locale;
+    var loc = (requested == null) ? 'en' : String(requested).toLowerCase();
+    var tenant = (cfg.translations && typeof cfg.translations === 'object') ? cfg.translations : null;
+    var hasBuiltin = !DANGEROUS_KEYS[loc] && Object.prototype.hasOwnProperty.call(I18N, loc);
+    var hasTenant = !!(tenant && !DANGEROUS_KEYS[loc] &&
+        Object.prototype.hasOwnProperty.call(tenant, loc) &&
+        tenant[loc] && typeof tenant[loc] === 'object');
+    if (!hasBuiltin && !hasTenant) {
+      if (typeof console !== 'undefined') {
+        console.warn('[CookieConsent] onbekende locale, terugval op en:', requested);
+      }
+      loc = 'en';
+      hasBuiltin = true;
+      hasTenant = !!(tenant && Object.prototype.hasOwnProperty.call(tenant, 'en') &&
+          tenant.en && typeof tenant.en === 'object');
+    }
+    var out = overlayTexts({}, I18N.en);                       // 1. vangnet
+    if (hasBuiltin && loc !== 'en') overlayTexts(out, I18N[loc]); // 2. ingebouwde taal
+    if (hasTenant) overlayTexts(out, tenant[loc]);             // 3. tenant translations
+    if (cfg.texts && typeof cfg.texts === 'object') overlayTexts(out, cfg.texts); // 4. per-key override
+    return out;
+  }
+
+  /**
+   * DE KERN-FIX: bepaal of (opnieuw) consent gevraagd moet worden.
+   * true als er geen geldige opgeslagen consent is OF als de opgeslagen
+   * consent-versie afwijkt van de huidige config-versie (policy is gewijzigd).
+   * Hiermee werkt de gedocumenteerde "re-consent bij policy-wijziging" echt.
+   */
+  function needsReconsent(stored, currentVersion, categories) {
+    if (!stored || typeof stored !== 'object') return true;
+    var cats = categories || ['analytics', 'marketing'];
+    for (var i = 0; i < cats.length; i++) {
+      if (cats[i] === 'necessary') continue;
+      if (typeof stored[cats[i]] !== 'boolean') return true;  // categorie ontbreekt -> re-consent
+    }
+    // String-vergelijking: voorkomt spurious re-consent bij "1" (string) vs 1 (number)
+    if (String(stored.version) !== String(currentVersion)) return true;
+    return false;
+  }
+
+  /**
+   * Genereer een unieke consent-id voor audit-bewijs (GDPR Art. 7).
+   * Gebruikt crypto.randomUUID() waar beschikbaar; anders een ES5-veilige
+   * UUID-v4-achtige fallback via Math.random (geen externe deps).
+   */
+  function genConsentId() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      var r = Math.random() * 16 | 0;
+      var v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  /** Bouw het te bewaren consent-object incl. id, versie + timestamp. */
+  function buildConsentRecord(choice, config, nowIso) {
+    var record = { id: genConsentId(), necessary: true, version: config.consentVersion, timestamp: nowIso };
+    var cats = (config && config.categories) || ['necessary', 'analytics', 'marketing'];
+    for (var i = 0; i < cats.length; i++) {
+      if (cats[i] === 'necessary') continue;
+      record[cats[i]] = !!choice[cats[i]];   // config-driven: ook custom categorieën
+    }
+    // gtag-mapping vereist analytics + marketing altijd als boolean aanwezig
+    if (typeof record.analytics !== 'boolean') record.analytics = !!choice.analytics;
+    if (typeof record.marketing !== 'boolean') record.marketing = !!choice.marketing;
+    return record;
+  }
+
+  /**
+   * Bouw een STABIELE, gedocumenteerde audit-payload uit een consent-record.
+   * Doel: server-side bewijs van consent (GDPR Art. 7 accountability) met een
+   * vorm die NIET varieert met tenant-specifieke categorie-namen op top-niveau.
+   * Alle per-categorie booleans (necessary/analytics/marketing + custom) komen
+   * onder een vaste 'categories'-sleutel; de overige top-velden zijn altijd
+   * dezelfde set. Zo kan een audit-endpoint elke tenant uniform verwerken.
+   *
+   * Privacy-veilig: leidt UITSLUITEND af uit het reeds gebouwde consent-record.
+   * Verzint geen PII en leest geen navigator/user-agent/IP (de server vangt het
+   * IP zelf af). 'necessary' is per definitie altijd true.
+   *
+   * Vorm:
+   *   { id, version, timestamp, categories:{necessary,...}, source, schema }
+   */
+  function buildConsentLogPayload(record) {
+    var r = (record && typeof record === 'object') ? record : {};
+    var categories = { necessary: true };
+    var RESERVED = { id: 1, version: 1, timestamp: 1, necessary: 1 };
+    for (var k in r) {
+      if (!Object.prototype.hasOwnProperty.call(r, k)) continue;
+      if (DANGEROUS_KEYS[k]) continue;   // prototype-pollution-bescherming
+      if (RESERVED[k]) continue;         // top-niveau meta-velden niet als categorie
+      categories[k] = !!r[k];            // elke overige record-boolean is een categorie
+    }
+    return {
+      id: r.id,
+      version: r.version,
+      timestamp: r.timestamp,
+      categories: categories,
+      source: 'cookie-consent-manager',
+      schema: 1
+    };
+  }
+
+  /**
+   * Bouw een DOM-vrij model voor het per-categorie consent-paneel (Customize).
+   * Geeft een array terug van rijen { key, label, description, required, checked }
+   * per categorie uit config.categories. De render-laag gebruikt dit model.
+   *
+   * Regels:
+   *   - necessary -> required:true + checked:true (altijd aan, niet uitschakelbaar)
+   *   - overige categorieën -> checked = bestaande opgeslagen keuze of false
+   *     (privacy-by-default; consent is opt-in)
+   *   - label uit translations[key], description uit translations[key + 'Desc'];
+   *     ontbreekt een vertaling dan valt het terug op de categorie-key zelf.
+   */
+  function buildCategoryModel(config, translations, stored) {
+    var cats = (config && config.categories) || ['necessary', 'analytics', 'marketing'];
+    var t = translations || {};
+    var s = (stored && typeof stored === 'object') ? stored : null;
+    var rows = [];
+    for (var i = 0; i < cats.length; i++) {
+      var key = cats[i];
+      if (DANGEROUS_KEYS[key]) continue;  // prototype-pollution-bescherming
+      var required = (key === 'necessary');
+      var checked;
+      if (required) {
+        checked = true;
+      } else if (s && typeof s[key] === 'boolean') {
+        checked = s[key];
+      } else {
+        checked = false;
+      }
+      var label = (typeof t[key] === 'string') ? t[key] : key;
+      var descKey = key + 'Desc';
+      var description = (typeof t[descKey] === 'string') ? t[descKey] : '';
+      rows.push({ key: key, label: label, description: description, required: required, checked: checked });
+    }
+    return rows;
+  }
+
+  /**
+   * Pure, DOM-vrije helper voor event-delegation van de "Beheer cookies"-link.
+   * Loopt vanaf node omhoog door parentNode en geeft true zodra een element
+   * het attribuut data-cookie-consent="manage" heeft. Zo werkt ook een klik op
+   * een child-element van de link, en werken elementen die NA init worden
+   * toegevoegd ook (de listener staat gedelegeerd op document).
+   * Stopt bij niet-element-nodes (nodeType !== 1) of het einde van de keten.
+   * Testbaar met fake-node-objecten { nodeType:1, getAttribute, parentNode }.
+   */
+  function isManageTrigger(node) {
+    var current = node;
+    while (current && current.nodeType === 1 &&
+           typeof current.getAttribute === 'function') {
+      if (current.getAttribute('data-cookie-consent') === 'manage') return true;
+      current = current.parentNode;
+    }
+    return false;
+  }
+
+  function serializeConsent(record) {
+    return encodeURIComponent(JSON.stringify(record));
+  }
+
+  function parseConsent(raw) {
+    if (!raw) return null;
+    try { return JSON.parse(decodeURIComponent(raw)); } catch (e) { return null; }
+  }
+
+  // ============================================================
+  // BROWSER-LAAG (DOM + cookies + GTM) — alleen actief in de browser
+  // ============================================================
+
+  var _config = mergeConfig(DEFAULTS, {});
+
+  function hasDocument() { return typeof document !== 'undefined' && !!document; }
+
+  function currentPath() {
+    return (typeof window !== 'undefined' && window.location && window.location.pathname) || '';
+  }
+
+  function isHttps() {
+    return typeof window !== 'undefined' && window.location && window.location.protocol === 'https:';
+  }
+
+  function getTranslations() {
+    // Expliciete config.locale wint; anders het bestaande pad-gedreven
+    // taalmechanisme (languagePaths + defaultLanguage). In beide gevallen
+    // lost resolveTexts de daadwerkelijke strings op (incl. texts-override).
+    if (_config.locale != null) return resolveTexts(_config);
+    return resolveTexts(_config, detectLanguage(currentPath(), _config));
+  }
+
+  /** Saniteer de cookienaam (geen ; = spaties) zodat een tenant-config de
+   *  cookie-header niet kan corrumperen. */
+  function cookieName() {
+    return String(_config.consentCookieName || 'cc_consent').replace(/[^A-Za-z0-9_-]/g, '') || 'cc_consent';
+  }
+
+  function readConsentCookie() {
+    if (!hasDocument()) return null;
+    var name = cookieName() + '=';
+    var cookies = document.cookie.split(';');
+    for (var i = 0; i < cookies.length; i++) {
+      var c = cookies[i].trim();
+      if (c.indexOf(name) === 0) return parseConsent(c.substring(name.length));
+    }
+    return null;
+  }
+
+  function writeConsentCookie(record) {
+    if (!hasDocument()) return;
+    var d = new Date();
+    d.setTime(d.getTime() + (_config.consentCookieDays * 864e5));
+    // Secure alleen op https — anders dropt de browser de cookie stil (localhost/dev)
+    var secure = isHttps() ? ';Secure' : '';
+    document.cookie = cookieName() + '=' + serializeConsent(record) +
+      ';expires=' + d.toUTCString() + ';path=/;SameSite=Lax' + secure;
+  }
+
+  function pushDataLayer(record) {
+    if (typeof window === 'undefined') return;
+    window.dataLayer = window.dataLayer || [];
+    // instrumentatie: meetbaar event (no feature without its metric)
+    window.dataLayer.push({
+      event: 'cookie_consent_update',
+      cookie_consent_analytics: record.analytics,
+      cookie_consent_marketing: record.marketing,
+      cookie_consent_version: record.version
+    });
+  }
+
+  function applyConsent(record) {
+    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+      window.gtag('consent', 'update', {
+        analytics_storage: record.analytics ? 'granted' : 'denied',
+        ad_storage: record.marketing ? 'granted' : 'denied',
+        ad_user_data: record.marketing ? 'granted' : 'denied',
+        ad_personalization: record.marketing ? 'granted' : 'denied',
+        personalization_storage: record.marketing ? 'granted' : 'denied'
+      });
+    }
+    pushDataLayer(record);
+    if (record.marketing) loadMarketingPixels();
+    if (typeof _config.onConsent === 'function') {
+      try { _config.onConsent(record); } catch (e) { /* tenant-callback mag de flow niet breken */ }
+    }
+  }
+
+  function loadMarketingPixels() {
+    if (!hasDocument()) return;
+    (_config.marketingPixels || []).forEach(function (pixel) {
+      var src = pixel.src || pixel;
+      if (!isSafePixelSrc(src)) {  // alleen https-bronnen; weert javascript:/data:/relatief/undefined
+        if (typeof console !== 'undefined') console.warn('[CookieConsent] onveilige pixel-src genegeerd:', src);
+        return;
+      }
+      if (document.querySelector('script[src="' + src + '"]')) return;
+      var s = document.createElement('script');
+      s.src = src; s.async = true;
+      if (typeof pixel.onLoad === 'function') s.onload = pixel.onLoad;
+      document.head.appendChild(s);
+    });
+  }
+
+  /**
+   * Stuur de gestandaardiseerde audit-payload naar config.consentLogUrl als die
+   * gezet en veilig is (server-side bewijs van consent, GDPR Art. 7).
+   *
+   * Validatie: de URL loopt door isSafeUrl (alleen relatief /... of https://);
+   * een onveilige/relatief-niet-toegestane waarde wordt genegeerd met een
+   * console.warn, exact zoals loadMarketingPixels dat doet voor onveilige
+   * pixel-srcs. Nooit naar http://, javascript:, data:, etc.
+   *
+   * Verzendmechanisme: bij voorkeur navigator.sendBeacon met een Blob
+   * (type application/json); fallback op fetch met keepalive zodat de request
+   * de pagina-unload overleeft. Bestaat geen van beide -> stil no-op.
+   *
+   * Defensief: de hele verzending zit in try/catch zodat een audit-fout NOOIT
+   * de consent-flow breekt (zelfde houding als de tenant onConsent-callback).
+   *
+   * Waarom hier (saveAndClose) en niet in applyConsent: dit vertegenwoordigt een
+   * NIEUWE consent-beslissing. applyConsent draait ook bij elke page-load voor
+   * reeds opgeslagen consent; daar loggen zou dubbele audit-records per pageview
+   * opleveren. Eén beacon per opgeslagen beslissing volstaat (geen dedup-cookie).
+   */
+  function logConsent(record) {
+    var url = _config.consentLogUrl;
+    if (!url) return;  // standaard uit
+    if (!isSafeUrl(url)) {  // alleen relatief / https; weert javascript:/data:/http:/undefined
+      if (typeof console !== 'undefined') console.warn('[CookieConsent] onveilige consentLogUrl genegeerd:', url);
+      return;
+    }
+    var payload = buildConsentLogPayload(record);
+    try {
+      var body = JSON.stringify(payload);
+      if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function' &&
+          typeof Blob !== 'undefined') {
+        navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }));
+      } else if (typeof fetch === 'function') {
+        fetch(url, {
+          method: 'POST',
+          keepalive: true,
+          headers: { 'Content-Type': 'application/json' },
+          body: body,
+          credentials: 'omit'
+        }).catch(function () { /* netwerk-fout in audit-beacon mag de flow niet breken */ });
+      }
+      // geen van beide beschikbaar -> stil no-op
+    } catch (e) { /* audit-fout mag de consent-flow nooit breken */ }
+  }
+
+  function saveAndClose(choice) {
+    var record = buildConsentRecord(choice, _config, new Date().toISOString());
+    writeConsentCookie(record);
+    applyConsent(record);
+    logConsent(record);  // audit-beacon: alleen bij een verse beslissing, niet bij page-load replay
+    var overlay = hasDocument() && document.getElementById('cc-overlay');
+    if (overlay) { overlay.classList.add('cc-hiding'); setTimeout(function () { overlay.remove(); }, 300); }
+  }
+
+  /** Kleine element-helper: zet tekst via textContent (geen HTML-injectie). */
+  function el(tag, opts) {
+    var node = document.createElement(tag);
+    if (opts) {
+      if (opts.id) node.id = opts.id;
+      if (opts.cls) node.className = opts.cls;
+      if (opts.text != null) node.textContent = opts.text;  // escapet automatisch
+    }
+    return node;
+  }
+
+  /**
+   * Injecteer de gebundelde scoped CSS via een <style id="cc-styles">.
+   * Idempotent: als de style-tag al bestaat doet dit niets (één <style>).
+   * CSS wordt via .textContent gezet (nooit innerHTML) en uit gevalideerde
+   * theme-kleuren opgebouwd, dus geen CSS-injectie.
+   */
+  function injectStyles() {
+    if (!hasDocument()) return;
+    if (document.getElementById('cc-styles')) return;  // idempotent
+    var style = document.createElement('style');
+    style.id = 'cc-styles';
+    style.textContent = buildStyleCss(_config.theme);
+    var parent = document.head || document.getElementsByTagName('head')[0] || document.documentElement;
+    parent.appendChild(style);
+  }
+
+  function renderBanner() {
+    if (!hasDocument()) return;
+    injectStyles();  // styling aanwezig voordat de banner verschijnt
+    if (document.getElementById('cc-overlay')) return;  // geen dubbele banner
+    var t = getTranslations();
+
+    var overlay = el('div', { id: 'cc-overlay' });
+    var banner = el('div', { id: 'cc-banner' });
+    banner.setAttribute('role', 'dialog');
+    banner.setAttribute('aria-modal', 'true');
+    banner.setAttribute('aria-label', t.title);
+
+    var inner = el('div', { cls: 'cc-inner' });
+    inner.appendChild(el('h2', { text: t.title }));
+    inner.appendChild(el('p', { text: t.description }));
+
+    // Hoofd-actieknoppen: Reject / Customize / Accept (gelijke prominentie, GDPR)
+    var actions = el('div', { cls: 'cc-actions' });
+    var rejectBtn = el('button', { id: 'cc-reject', text: t.rejectAll });
+    var customizeBtn = el('button', { id: 'cc-customize', text: t.customize });
+    var acceptBtn = el('button', { id: 'cc-accept', text: t.acceptAll });
+    actions.appendChild(rejectBtn);
+    actions.appendChild(customizeBtn);
+    actions.appendChild(acceptBtn);
+    inner.appendChild(actions);
+
+    // Per-categorie paneel (toggles), verborgen tot de gebruiker op Customize klikt.
+    var stored = readConsentCookie();
+    var model = buildCategoryModel(_config, t, stored);
+    var categoriesWrap = el('div', { cls: 'cc-categories' });
+    categoriesWrap.style.display = 'none';
+    var checkboxes = {};   // key -> checkbox-node, voor uitlezen bij opslaan
+    for (var ci = 0; ci < model.length; ci++) {
+      var row = model[ci];
+      var rowEl = el('div', { cls: 'cc-category' });
+
+      var box = document.createElement('input');
+      box.type = 'checkbox';
+      box.checked = row.checked;             // state via property, geen HTML-string
+      box.disabled = row.required;           // necessary kan niet uit
+      box.setAttribute('data-cc-category', row.key);
+      box.setAttribute('aria-label', row.label);
+
+      var bodyEl = el('div', { cls: 'cc-category-body' });
+      bodyEl.appendChild(el('span', { cls: 'cc-category-label', text: row.label }));
+      if (row.description) {
+        bodyEl.appendChild(el('p', { cls: 'cc-category-desc', text: row.description }));
+      }
+
+      rowEl.appendChild(box);
+      rowEl.appendChild(bodyEl);
+      categoriesWrap.appendChild(rowEl);
+      checkboxes[row.key] = box;
+    }
+    inner.appendChild(categoriesWrap);
+
+    // Save-knop: alleen zichtbaar in customize-modus.
+    var saveActions = el('div', { cls: 'cc-actions' });
+    saveActions.style.display = 'none';
+    var saveBtn = el('button', { id: 'cc-save', text: t.savePreferences });
+    saveActions.appendChild(saveBtn);
+    inner.appendChild(saveActions);
+
+    var footer = el('div', { cls: 'cc-footer' });
+    var link = el('a', { text: t.privacyLink });
+    link.setAttribute('href', isSafeUrl(_config.privacyUrl) ? _config.privacyUrl : '#');
+    footer.appendChild(link);
+    inner.appendChild(footer);
+
+    banner.appendChild(inner);
+    overlay.appendChild(banner);
+    document.body.appendChild(overlay);
+
+    rejectBtn.addEventListener('click', function () { saveAndClose({ analytics: false, marketing: false }); });
+    acceptBtn.addEventListener('click', function () { saveAndClose({ analytics: true, marketing: true }); });
+
+    // Customize: toon het per-categorie paneel + save-knop, verberg de hoofdknoppen.
+    customizeBtn.addEventListener('click', function () {
+      actions.style.display = 'none';
+      categoriesWrap.style.display = '';
+      saveActions.style.display = '';
+    });
+
+    // Save: lees de checkbox-states uit en bewaar de per-categorie keuze.
+    saveBtn.addEventListener('click', function () {
+      var choice = {};
+      for (var key in checkboxes) {
+        if (!Object.prototype.hasOwnProperty.call(checkboxes, key)) continue;
+        if (key === 'necessary') continue;   // necessary is impliciet altijd aan
+        choice[key] = !!checkboxes[key].checked;
+      }
+      saveAndClose(choice);
+    });
+  }
+
+  /** Zet Consent Mode v2 defaults op 'denied' VOORDAT GTM laadt (GDPR: geen tracking
+   *  zonder consent; GA4 stuurt enkel cookieless pings tot consent gegeven is). */
+  function setConsentDefaults() {
+    if (typeof window === 'undefined') return;
+    window.dataLayer = window.dataLayer || [];
+    if (typeof window.gtag !== 'function') {
+      window.gtag = function () { window.dataLayer.push(arguments); };
+    }
+    window.gtag('consent', 'default', {
+      ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied',
+      analytics_storage: 'denied', functionality_storage: 'granted',
+      personalization_storage: 'denied', security_storage: 'granted', wait_for_update: 500
+    });
+  }
+
+  function loadGTM() {
+    if (!hasDocument() || window.__ccGtmLoaded) return;
+    if (!isValidGtmId(_config.gtmId)) {
+      if (_config.gtmId && typeof console !== 'undefined') {
+        console.warn('[CookieConsent] ongeldig gtmId genegeerd:', _config.gtmId);
+      }
+      return;
+    }
+    window.__ccGtmLoaded = true;
+    (function (w, d, s, l, i) {
+      w[l] = w[l] || []; w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+      var f = d.getElementsByTagName(s)[0], j = d.createElement(s);
+      j.async = true; j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i;
+      f.parentNode.insertBefore(j, f);
+    })(window, document, 'script', 'dataLayer', _config.gtmId);
+  }
+
+  // ============================================================
+  // PUBLIEKE API
+  // ============================================================
+  function init(userConfig) {
+    _config = mergeConfig(DEFAULTS, userConfig);
+    if (_config.autoLoadGTM) {
+      setConsentDefaults();  // denied VOOR GTM laadt
+      loadGTM();
+    }
+    if (!_config.enabled || !hasDocument()) return;
+
+    // De "Beheer cookies"-heropen-link moet altijd werken, ook als de banner
+    // deze keer niet getoond wordt (consent is al gegeven).
+    bindManageTriggers();
+
+    var stored = readConsentCookie();
+    if (needsReconsent(stored, _config.consentVersion, _config.categories)) {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', renderBanner);
+      } else {
+        renderBanner();
+      }
+    } else {
+      applyConsent(stored);
+    }
+  }
+
+  /** Heropen de banner (bv. via een "Manage cookies"-link). */
+  function show() {
+    if (hasDocument() && !document.getElementById('cc-overlay')) renderBanner();
+  }
+
+  /**
+   * Zet een gedelegeerde click-listener op document die bij een klik op (of in)
+   * een element met data-cookie-consent="manage" de banner heropent via show().
+   * Idempotent via window.__ccManageBound (één listener, ook bij meerdere
+   * init-calls). Doet niets zonder document. Delegatie zorgt dat ook links die
+   * NA init aan de DOM worden toegevoegd blijven werken.
+   */
+  function bindManageTriggers() {
+    if (!hasDocument()) return;
+    if (typeof window !== 'undefined' && window.__ccManageBound) return;
+    if (typeof window !== 'undefined') window.__ccManageBound = true;
+    document.addEventListener('click', function (e) {
+      if (isManageTrigger(e.target)) {
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        show();
+      }
+    });
+  }
+
+  function getConsent() { return readConsentCookie(); }
+
+  return {
+    version: VERSION,
+    init: init,
+    show: show,
+    getConsent: getConsent,
+    // intern blootgesteld voor tests (DOM-vrije pure logica)
+    _internals: {
+      mergeConfig: mergeConfig,
+      detectLanguage: detectLanguage,
+      resolveTexts: resolveTexts,
+      I18N: I18N,
+      needsReconsent: needsReconsent,
+      genConsentId: genConsentId,
+      buildConsentRecord: buildConsentRecord,
+      buildConsentLogPayload: buildConsentLogPayload,
+      buildCategoryModel: buildCategoryModel,
+      serializeConsent: serializeConsent,
+      parseConsent: parseConsent,
+      isManageTrigger: isManageTrigger,
+      isSafeUrl: isSafeUrl,
+      isValidGtmId: isValidGtmId,
+      isSafePixelSrc: isSafePixelSrc,
+      isSafeColor: isSafeColor,
+      buildStyleCss: buildStyleCss,
+      DEFAULTS: DEFAULTS
+    }
+  };
+});
