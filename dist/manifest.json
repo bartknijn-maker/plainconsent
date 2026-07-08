@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "files": {
-    "cookie-consent.v1.0.0.js": "sha384-v2GdutRXHHFlBqocu86nSDgCaRA4Xcy2R8LJLmhDMM53497G0j0s5WguOzRb57Ka"
+    "cookie-consent.v1.0.0.js": "sha384-raaFmUz9nCZmnLPN7C1GLqkTPyqD9cxcz3pozjvS8y/K/nP+oK8C7BI9+jJDWiNX"
   },
   "aliases": {
     "cookie-consent.latest.js": "cookie-consent.v1.0.0.js"

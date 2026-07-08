@@ -236,6 +236,9 @@
     // pad-prefixes die een taal forceren (eerste match wint)
     languagePaths: { nl: ['/nl', '/nl-nl'] },
     categories: ['necessary', 'analytics', 'marketing'],
+    geo: 'always',                // 'always' = banner overal tonen | 'eu-only' = alleen in de EU
+    geoResolver: null,            // klant-functie die async {inEU: bool} levert (thenable of callback)
+    geoTimeout: 3000,             // ms wachten op de geoResolver; daarna fail-safe tonen
     marketingPixels: [],
     theme: { accent: '#2563EB', bg: '#0D0D0D', text: '#FFFFFF' },
     onConsent: null,             // callback(consent) na elke keuze
@@ -352,6 +355,43 @@
     // String-vergelijking: voorkomt spurious re-consent bij "1" (string) vs 1 (number)
     if (String(stored.version) !== String(currentVersion)) return true;
     return false;
+  }
+
+  /**
+   * GEO-TARGETING (item 8): pure, DOM-vrije beslisser of de banner getoond
+   * moet worden op basis van een geo-resultaat en config.geo.
+   *
+   * Regels:
+   *   - config.geo !== 'eu-only' (dus 'always', ontbrekend of onbekend) -> true.
+   *     Exact het gedrag van voor dit item; er is dan geen geo-resultaat nodig.
+   *   - config.geo === 'eu-only' + geldig resultaat {inEU: boolean} -> inEU.
+   *   - config.geo === 'eu-only' + ongeldig resultaat (null, geen object,
+   *     inEU geen boolean) -> true. FAIL-SAFE: de consent-plicht weegt zwaarder
+   *     dan het verbergen van de banner; bij twijfel dus altijd tonen.
+   *
+   * Let op: dit bepaalt UITSLUITEND of de banner verschijnt bij ontbrekende
+   * consent. Replay van bestaand consent (consent-mode + script-unblocking)
+   * loopt hier bewust NIET doorheen en werkt dus altijd, ongeacht geo.
+   */
+  function shouldShowBanner(geoResult, config) {
+    var geo = config && config.geo;
+    if (geo !== 'eu-only') return true;  // 'always' / ontbrekend / onbekend: huidig gedrag
+    if (geoResult && typeof geoResult === 'object' && typeof geoResult.inEU === 'boolean') {
+      return geoResult.inEU;
+    }
+    return true;  // fail-safe: ongeldig/ontbrekend resultaat -> tonen
+  }
+
+  /**
+   * GEO-TIMEOUT (fix-ronde na review): valideer config.geoTimeout tot een
+   * bruikbaar aantal ms. Alleen een eindig, positief getal is geldig; alles
+   * anders (string, 0, negatief, NaN, Infinity, ontbrekend) valt terug op de
+   * default van 3000ms. Pure helper, DOM-vrij, node-testbaar.
+   */
+  var GEO_TIMEOUT_DEFAULT = 3000;
+  function normalizeGeoTimeout(value) {
+    if (typeof value === 'number' && isFinite(value) && value > 0) return value;
+    return GEO_TIMEOUT_DEFAULT;
   }
 
   /**
@@ -790,6 +830,88 @@
     })(window, document, 'script', 'dataLayer', _config.gtmId);
   }
 
+  /** Render de banner nu, of zodra de DOM klaar is (bestaand gedrag). */
+  function scheduleRenderBanner() {
+    if (!hasDocument()) return;
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', renderBanner);
+    } else {
+      renderBanner();
+    }
+  }
+
+  /**
+   * GEO-FLOW (item 8): vraag de tenant-eigen geoResolver om {inEU: bool} en
+   * toon de banner alleen als shouldShowBanner dat zegt. Alleen aangeroepen
+   * als config.geo === 'eu-only' EN er geen geldige consent is; bij
+   * geo 'always'/ontbrekend wordt deze functie nooit bereikt (geen resolver-call).
+   *
+   * Er is bewust GEEN ingebouwde third-party geo-API-call: privacy en
+   * dependency-vrij is de kernbelofte. De klant levert de resolver zelf aan.
+   *
+   * Resolver-contract (feature-detectie, beide stijlen netjes ondersteund):
+   *   - callback-stijl:  geoResolver(function (result) { ... })
+   *   - promise-stijl:   geoResolver() geeft een thenable terug; die consumeren
+   *     we via .then. Het script maakt zelf NOOIT een Promise aan (ES5-compat:
+   *     oude browsers zonder Promise crashen dus niet; de thenable is klant-code).
+   * De eerste uitkomst wint (settled-guard): roept een resolver zowel de
+   * callback aan ALS resolvet zijn thenable, dan telt alleen de eerste.
+   *
+   * FAIL-SAFE (consent-plicht > verbergen): geen resolver, resolver gooit,
+   * thenable rejects, ongeldig resultaat OF geen antwoord binnen de timeout
+   * -> banner tonen.
+   *
+   * TIMEOUT (fix-ronde na review): een resolver die nooit settelt (bv. een
+   * hangende fetch die de callback nooit aanroept en geen settelende thenable
+   * teruggeeft) mag de banner niet voor altijd verbergen. Daarom start er
+   * VOOR de resolver-call een setTimeout (config.geoTimeout, default 3000ms,
+   * gevalideerd via normalizeGeoTimeout) die settle(null) aanroept: de
+   * fail-safe (tonen) wint dan alsnog. Settelt de resolver eerder, dan wordt
+   * de timer via clearTimeout opgeruimd. setTimeout/clearTimeout zijn ES5.
+   */
+  function resolveGeoAndRender() {
+    var resolver = _config.geoResolver;
+    if (typeof resolver !== 'function') {
+      // eu-only zonder resolver: fail-safe naar tonen
+      if (typeof console !== 'undefined') {
+        console.warn('[CookieConsent] geo "eu-only" zonder geoResolver; banner wordt getoond (fail-safe)');
+      }
+      scheduleRenderBanner();
+      return;
+    }
+    var settled = false;
+    var timer = null;
+    function settle(result) {
+      if (settled) return;
+      settled = true;
+      if (timer !== null) { clearTimeout(timer); timer = null; }
+      if (shouldShowBanner(result, _config)) scheduleRenderBanner();
+    }
+    if (typeof setTimeout === 'function') {
+      var timeoutMs = normalizeGeoTimeout(_config.geoTimeout);
+      timer = setTimeout(function () {
+        if (settled) return;  // al beslist: niets meer te doen
+        if (typeof console !== 'undefined') {
+          console.warn('[CookieConsent] geoResolver antwoordde niet binnen ' + timeoutMs + 'ms; banner wordt getoond (fail-safe)');
+        }
+        settle(null);
+      }, timeoutMs);
+    }
+    try {
+      var ret = resolver(function (result) { settle(result); });
+      if (ret && typeof ret.then === 'function') {
+        // thenable van de klant consumeren; rejection -> fail-safe tonen
+        ret.then(
+          function (result) { settle(result); },
+          function () { settle(null); }
+        );
+      }
+      // geen thenable teruggegeven -> we wachten op de callback-aanroep
+    } catch (e) {
+      settle(null);  // resolver gooit synchroon -> fail-safe tonen
+    }
+  }
+
   // ============================================================
   // PUBLIEKE API
   // ============================================================
@@ -802,17 +924,19 @@
     if (!_config.enabled || !hasDocument()) return;
 
     // De "Beheer cookies"-heropen-link moet altijd werken, ook als de banner
-    // deze keer niet getoond wordt (consent is al gegeven).
+    // deze keer niet getoond wordt (consent is al gegeven of geo verbergt hem).
     bindManageTriggers();
 
     var stored = readConsentCookie();
     if (needsReconsent(stored, _config.consentVersion, _config.categories)) {
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', renderBanner);
+      // Geo bepaalt ALLEEN of de banner verschijnt bij ontbrekende consent.
+      if (_config.geo === 'eu-only') {
+        resolveGeoAndRender();
       } else {
-        renderBanner();
+        scheduleRenderBanner();  // 'always' / ontbrekend: exact het oude gedrag
       }
     } else {
+      // Replay van bestaand consent werkt ALTIJD, ongeacht geo-uitkomst.
       applyConsent(stored);
     }
   }
@@ -855,6 +979,8 @@
       resolveTexts: resolveTexts,
       I18N: I18N,
       needsReconsent: needsReconsent,
+      shouldShowBanner: shouldShowBanner,
+      normalizeGeoTimeout: normalizeGeoTimeout,
       genConsentId: genConsentId,
       buildConsentRecord: buildConsentRecord,
       buildConsentLogPayload: buildConsentLogPayload,

@@ -9,7 +9,7 @@ Website: https://plainconsent.com
 
 ```html
 <script src="https://plainconsent.com/dist/cookie-consent.v1.0.0.js"
-        integrity="sha384-v2GdutRXHHFlBqocu86nSDgCaRA4Xcy2R8LJLmhDMM53497G0j0s5WguOzRb57Ka"
+        integrity="sha384-raaFmUz9nCZmnLPN7C1GLqkTPyqD9cxcz3pozjvS8y/K/nP+oK8C7BI9+jJDWiNX"
         crossorigin="anonymous"></script>
 <script>CookieConsent.init({ /* your config, see plainconsent.com */ });</script>
 ```
