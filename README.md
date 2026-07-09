@@ -9,8 +9,8 @@ Website: https://plainconsent.com
 ## Embed (versioned, with SRI)
 
 ```html
-<script src="https://plainconsent.com/dist/cookie-consent.v1.1.0.js"
-        integrity="sha384-irwxZlM0ttEvMHb7xlIbUzU5Y/f+vFkpRE4CqSBetpOFWeldbnHQSriGfrZHrBoX"
+<script src="https://plainconsent.com/dist/cookie-consent.v1.2.0.js"
+        integrity="sha384-+h8pqi4gJp17tIovbZjstTISdA1+nl1RXgYo0Za1vJf7bhH4QgRYTkW8K8HFCG+P"
         crossorigin="anonymous"></script>
 <script>CookieConsent.init({ /* your config, see plainconsent.com */ });</script>
 ```
