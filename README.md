@@ -1,15 +1,16 @@
 # PlainConsent
 
-The cookie banner with nothing to hide. One small script that asks politely,
-remembers the answer, and can prove it (GDPR Article 7 audit records).
+GDPR-proof cookie consent, at the lowest price. One small script: consent with a
+real audit trail (GDPR Article 7), five languages, styled to match your brand,
+live in minutes on any CMS. Flat price per site, with a lowest-price guarantee.
 
 Website: https://plainconsent.com
 
 ## Embed (versioned, with SRI)
 
 ```html
-<script src="https://plainconsent.com/dist/cookie-consent.v1.0.0.js"
-        integrity="sha384-raaFmUz9nCZmnLPN7C1GLqkTPyqD9cxcz3pozjvS8y/K/nP+oK8C7BI9+jJDWiNX"
+<script src="https://plainconsent.com/dist/cookie-consent.v1.1.0.js"
+        integrity="sha384-irwxZlM0ttEvMHb7xlIbUzU5Y/f+vFkpRE4CqSBetpOFWeldbnHQSriGfrZHrBoX"
         crossorigin="anonymous"></script>
 <script>CookieConsent.init({ /* your config, see plainconsent.com */ });</script>
 ```

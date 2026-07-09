@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f7f3ec"/>
+  <rect x="40" y="40" width="1120" height="550" fill="none" stroke="#d8cfc0" stroke-width="2"/>
+
+  <!-- masthead -->
+  <text x="80" y="112" font-family="Georgia, serif" font-weight="900" font-size="30" letter-spacing="-0.5">
+    <tspan fill="#1b1712">Plain</tspan><tspan fill="#b3402a">Consent</tspan>
+  </text>
+  <line x1="80" y1="132" x2="1120" y2="132" stroke="#1b1712" stroke-width="2"/>
+
+  <!-- headline -->
+  <text x="80" y="270" font-family="Georgia, serif" font-weight="900" font-size="76" letter-spacing="-2" fill="#1b1712">GDPR-proof cookie</text>
+  <text x="80" y="352" font-family="Georgia, serif" font-weight="900" font-size="76" letter-spacing="-2" fill="#1b1712">consent, at the</text>
+  <text x="80" y="434" font-family="Georgia, serif" font-weight="400" font-style="italic" font-size="76" letter-spacing="-2" fill="#b3402a">lowest price.</text>
+
+  <!-- sub -->
+  <text x="82" y="500" font-family="'Courier New', monospace" font-size="21" letter-spacing="1.5" fill="#5c5347">A REAL AUDIT TRAIL · FIVE LANGUAGES · YOUR BRAND · LIVE IN MINUTES</text>
+
+  <!-- stamp -->
+  <g transform="translate(1010 205) rotate(11)">
+    <circle r="82" fill="none" stroke="#b3402a" stroke-width="3"/>
+    <text y="-16" text-anchor="middle" font-family="'Courier New', monospace" font-size="20" letter-spacing="2" fill="#b3402a">GDPR</text>
+    <text y="10" text-anchor="middle" font-family="'Courier New', monospace" font-size="20" letter-spacing="2" fill="#b3402a">PROOF</text>
+    <text y="42" text-anchor="middle" font-family="Georgia, serif" font-size="30" fill="#b3402a">&#10003;</text>
+  </g>
+
+  <!-- footer -->
+  <text x="80" y="560" font-family="'Courier New', monospace" font-size="18" letter-spacing="1.5" fill="#5c5347">plainconsent.com</text>
+</svg>

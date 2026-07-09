@@ -1,0 +1,18 @@
+# PlainConsent
+
+> GDPR-proof cookie consent banner at the lowest price. One small script that asks for consent, remembers the choice per category, and can prove it with an audit record. Live in minutes on any CMS, styled to match your brand.
+
+## What it is
+PlainConsent is a cookie consent manager (a Cookiebot alternative) made by Bart Knijnenberg. It is a single small script with zero third-party calls: your visitors' data never leaves your page.
+
+## Key facts
+- GDPR-proof: every fresh decision gets a unique consent ID and a standardised audit record for GDPR Article 7. Google Consent Mode v2 sets tracking to denied before anything loads.
+- Lowest price, guaranteed: a flat price per site (Solo 5 euro, Studio 12 euro, Agency 29 euro per month), no per-pageview pricing, and every plan has every feature. Find a comparable paid consent manager cheaper and we beat that price by 10 percent, in writing.
+- Easy to use: a config generator plus one embed snippet, live in minutes on any CMS.
+- Brand fit: set your own colours and all of the banner text. Five languages built in: English, Dutch, German, Spanish, French.
+- No dark patterns: accept and decline carry equal weight, with granular per-category choice and a re-open link.
+
+## Links
+- English site: https://plainconsent.com/
+- Dutch site: https://plainconsent.com/nl/
+- Maker: https://bartknijnenberg.com

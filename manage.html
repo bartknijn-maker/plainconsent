@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My PlainConsent: configure, copy, verify</title>
+<meta name="description" content="Configure your PlainConsent banner with a live preview, copy your embed snippet, and verify your install. No account needed: your settings live in the link.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f7f3ec;
+    --paper-deep:#efe8dc;
+    --ink:#1b1712;
+    --ink-soft:#5c5347;
+    --rule:#d8cfc0;
+    --stamp:#b3402a;
+    --stamp-soft:#b3402a22;
+    --serif:"Fraunces",Georgia,serif;
+    --mono:"IBM Plex Mono",ui-monospace,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--serif);
+    font-weight:300;
+    line-height:1.6;
+    font-size:17px;
+    position:relative;
+  }
+  /* papierkorrel */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:1000;opacity:.5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .sheet{max-width:980px;margin:0 auto;padding:0 28px}
+  .mono{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+
+  /* ---------- top ---------- */
+  header{padding:34px 0 0}
+  .masthead{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--ink);padding-bottom:14px}
+  .wordmark{font-weight:900;font-size:1.15rem;letter-spacing:-.01em}
+  .wordmark a{color:inherit;text-decoration:none}
+  .wordmark span{color:var(--stamp)}
+  nav a{color:var(--ink-soft);text-decoration:none;font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;margin-left:22px}
+  nav a:hover{color:var(--stamp)}
+
+  /* ---------- intro ---------- */
+  .intro{padding:64px 0 44px}
+  .intro h1{font-size:clamp(2.2rem,6vw,3.8rem);font-weight:900;line-height:1.05;letter-spacing:-.02em}
+  .intro h1 em{font-style:italic;font-weight:300}
+  .intro p.lede{margin-top:22px;max-width:58ch;font-size:1.1rem;color:var(--ink-soft)}
+
+  .btn{
+    font-family:var(--mono);font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;
+    padding:15px 26px;border:1.5px solid var(--ink);color:var(--ink);
+    text-decoration:none;background:transparent;cursor:pointer;
+    transition:all .18s ease;display:inline-block;
+  }
+  .btn:hover{background:var(--ink);color:var(--paper)}
+  .btn.primary{background:var(--stamp);border-color:var(--stamp);color:var(--paper)}
+  .btn.primary:hover{background:var(--ink);border-color:var(--ink)}
+  .btn.small{padding:9px 16px;font-size:.68rem}
+
+  /* ---------- steps ---------- */
+  section{padding:56px 0;border-top:1px solid var(--rule)}
+  .kicker{margin-bottom:30px}
+  .kicker h2{font-weight:600;font-size:1.7rem;letter-spacing:-.01em;margin-top:6px}
+  .kicker p{color:var(--ink-soft);max-width:60ch;margin-top:8px}
+
+  /* ---------- form ---------- */
+  .configure{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;align-items:start}
+  @media(max-width:820px){.configure{grid-template-columns:1fr}}
+  .presets{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px}
+  .field{margin-bottom:18px}
+  .field label{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px}
+  .field .hint{text-transform:none;letter-spacing:.02em;color:var(--ink-soft);opacity:.8}
+  input[type="text"],input[type="number"],select,textarea{
+    width:100%;padding:10px 12px;
+    background:transparent;color:var(--ink);
+    border:1px solid var(--rule);border-bottom:1.5px solid var(--ink);
+    font-family:var(--mono);font-size:.8rem;border-radius:0;
+  }
+  select{appearance:none;-webkit-appearance:none;cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235c5347'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;padding-right:30px;}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--stamp);outline-offset:1px}
+  .fieldgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+  @media(max-width:480px){.fieldgrid{grid-template-columns:1fr}}
+  .colorrow{display:flex;gap:8px;align-items:center}
+  .colorrow input[type="color"]{width:40px;height:38px;padding:2px;border:1px solid var(--rule);background:transparent;cursor:pointer;flex-shrink:0}
+
+  /* ---------- preview ---------- */
+  .preview-col{position:sticky;top:20px}
+  @media(max-width:820px){.preview-col{position:static}}
+  #preview-pane{
+    position:relative;min-height:430px;overflow:hidden;
+    border:1px solid var(--rule);background:var(--paper-deep);
+  }
+  #preview-pane .preview-empty{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    text-align:center;padding:24px;color:var(--ink-soft);
+  }
+  /* het echte product injecteert een fixed overlay; binnen de preview
+     wordt die naar het pane verplaatst en absolute gepositioneerd */
+  #preview-pane #cc-overlay{position:absolute !important}
+  .preview-note{margin-top:10px}
+  .linkrow{margin-top:22px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .copied{font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--stamp)}
+  ul.warnings{list-style:none;margin-top:16px}
+  ul.warnings li{
+    font-family:var(--mono);font-size:.72rem;color:var(--stamp);
+    padding:6px 0;border-bottom:1px dashed var(--rule);
+  }
+
+  /* ---------- snippet ---------- */
+  textarea.code{
+    min-height:170px;resize:vertical;line-height:1.55;
+    background:var(--paper-deep);border:1px solid var(--rule);border-bottom:1.5px solid var(--ink);
+  }
+  .snippet-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+
+  /* ---------- verify ---------- */
+  .verify-row{display:flex;gap:12px;flex-wrap:wrap}
+  .verify-row input{flex:1;min-width:240px}
+  #check-status{margin-top:14px}
+  .report{margin-top:22px;border:1px solid var(--rule);display:none}
+  .report .rrow{display:grid;grid-template-columns:220px 1fr;gap:14px;padding:12px 16px;border-bottom:1px dashed var(--rule)}
+  .report .rrow:last-child{border-bottom:none}
+  @media(max-width:560px){.report .rrow{grid-template-columns:1fr}}
+  .report dt{font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);padding-top:3px}
+  .report dd{font-family:var(--mono);font-size:.78rem;word-break:break-all}
+  .report dd.good{color:#1d6b35}
+  .report dd.bad{color:var(--stamp)}
+  ul.report-notes{list-style:none;margin-top:14px;display:none}
+  ul.report-notes li{
+    font-family:var(--mono);font-size:.72rem;color:var(--stamp);
+    padding:6px 0;border-bottom:1px dashed var(--rule);
+  }
+  .cors-help{display:none;margin-top:22px;background:var(--paper-deep);border:1px solid var(--rule);padding:22px}
+  .cors-help p{color:var(--ink-soft);max-width:62ch;margin-bottom:14px}
+
+  footer{border-top:1px solid var(--ink);margin-top:60px;padding:26px 0 50px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  footer a{color:var(--ink-soft)}
+</style>
+</head>
+<body>
+
+<header class="sheet">
+  <div class="masthead">
+    <div class="wordmark"><a href="index.html">Plain<span>Consent</span></a></div>
+    <nav>
+      <a href="#configure">Configure</a>
+      <a href="#snippet">Snippet</a>
+      <a href="#verify">Verify</a>
+      <a href="index.html#pricing">Pricing</a>
+    </nav>
+  </div>
+</header>
+
+<main class="sheet">
+
+  <div class="intro">
+    <p class="mono">Your banner, managed in plain sight</p>
+    <h1>My PlainConsent. <em>No login. Your link is your account.</em></h1>
+    <p class="lede">Three steps: configure your banner against a live preview of the real script, copy your snippet, verify your install. Every setting lives in this page's link, so bookmarking the URL is saving your work. Nothing is stored on our side.</p>
+  </div>
+
+  <section id="configure">
+    <div class="kicker">
+      <span class="mono">Step 01</span>
+      <h2>Configure, against the real banner</h2>
+      <p>The preview on the right is not a mockup: it is the actual script your visitors will run, re-rendered on every change you make.</p>
+    </div>
+
+    <div class="configure">
+      <div>
+        <div class="presets">
+          <button type="button" class="btn small" data-preset="default">Default</button>
+          <button type="button" class="btn small" data-preset="dark">Dark</button>
+          <button type="button" class="btn small" data-preset="eu">EU-only</button>
+        </div>
+
+        <div class="fieldgrid">
+          <div class="field">
+            <label for="f-locale">Banner language</label>
+            <select id="f-locale">
+              <option value="en">English</option>
+              <option value="nl">Nederlands</option>
+              <option value="de">Deutsch</option>
+              <option value="es">Espa&ntilde;ol</option>
+              <option value="fr">Fran&ccedil;ais</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-geo">Where the banner shows</label>
+            <select id="f-geo">
+              <option value="always">Everywhere</option>
+              <option value="eu-only">EU visitors only</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="f-accent">Accent color</label>
+          <div class="colorrow">
+            <input type="color" id="f-accent-pick" value="#2563EB" aria-label="Accent color picker">
+            <input type="text" id="f-accent" value="#2563EB" autocomplete="off" spellcheck="false">
+          </div>
+        </div>
+        <div class="fieldgrid">
+          <div class="field">
+            <label for="f-bg">Background color</label>
+            <div class="colorrow">
+              <input type="color" id="f-bg-pick" value="#0D0D0D" aria-label="Background color picker">
+              <input type="text" id="f-bg" value="#0D0D0D" autocomplete="off" spellcheck="false">
+            </div>
+          </div>
+          <div class="field">
+            <label for="f-text">Text color</label>
+            <div class="colorrow">
+              <input type="color" id="f-text-pick" value="#FFFFFF" aria-label="Text color picker">
+              <input type="text" id="f-text" value="#FFFFFF" autocomplete="off" spellcheck="false">
+            </div>
+          </div>
+        </div>
+
+        <div class="fieldgrid">
+          <div class="field">
+            <label for="f-gtm">GTM container ID <span class="hint">(GTM-XXXXXXX, optional)</span></label>
+            <input type="text" id="f-gtm" placeholder="GTM-XXXXXXX" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="f-ga4">GA4 measurement ID <span class="hint">(G-XXXXXXXXXX, optional)</span></label>
+            <input type="text" id="f-ga4" placeholder="G-XXXXXXXXXX" autocomplete="off" spellcheck="false">
+          </div>
+        </div>
+        <div class="fieldgrid">
+          <div class="field">
+            <label for="f-privacy">Privacy policy URL <span class="hint">(/path or https://)</span></label>
+            <input type="text" id="f-privacy" placeholder="/privacy-policy" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="f-version">Consent version <span class="hint">(raise after a policy change)</span></label>
+            <input type="number" id="f-version" min="1" step="1" placeholder="1">
+          </div>
+        </div>
+
+        <ul class="warnings" id="cfg-warnings" role="status" aria-label="Validation notes" hidden></ul>
+
+        <div class="linkrow">
+          <button type="button" class="btn primary" id="copy-link">Copy my configuration link</button>
+          <span class="copied" id="copied-link" hidden>copied</span>
+        </div>
+        <p class="preview-note mono">This link restores this exact configuration. Bookmark it: that is your account.</p>
+      </div>
+
+      <div class="preview-col">
+        <div id="preview-pane">
+          <div class="preview-empty">
+            <p>The live preview appears here.<br>If it is gone, you answered it, just like a real visitor would. Change any field to bring it back, or press the button below.</p>
+          </div>
+        </div>
+        <div class="linkrow">
+          <button type="button" class="btn small" id="rerun-preview">Re-run the preview</button>
+        </div>
+        <p class="preview-note mono" id="geo-note" hidden>EU-only mode: visitors outside the EU never see the banner. The preview always shows it.</p>
+        <p class="preview-note mono" id="product-missing" hidden>The product script did not load in this preview.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="snippet">
+    <div class="kicker">
+      <span class="mono">Step 02</span>
+      <h2>Copy the snippet</h2>
+      <p>Paste this just before the closing <span class="mono">&lt;/head&gt;</span> tag on every page of your site, above any Google Tag Manager snippet. That is the whole install.</p>
+    </div>
+    <div class="snippet-head">
+      <span class="mono">Your embed snippet</span>
+      <span><button type="button" class="btn small" id="copy-embed">Copy snippet</button><span class="copied" id="copied-embed" hidden>copied</span></span>
+    </div>
+    <textarea class="code" id="out-embed" readonly spellcheck="false" aria-label="Generated embed snippet"></textarea>
+    <p class="preview-note mono">Step-by-step guides per CMS are in the works. Need one now? <a href="index.html#access" style="color:var(--stamp)">Ask and we will walk you through it.</a></p>
+  </section>
+
+  <section id="verify">
+    <div class="kicker">
+      <span class="mono">Step 03</span>
+      <h2>Verify my install</h2>
+      <p>Enter the address of a page where you pasted the snippet. We fetch it in your browser, right here, and report what we find. Nothing is sent to us.</p>
+    </div>
+    <div class="verify-row">
+      <input type="text" id="f-check-url" placeholder="https://www.your-site.com/" autocomplete="off" spellcheck="false" aria-label="URL of the page to check">
+      <button type="button" class="btn primary" id="run-check">Check my page</button>
+    </div>
+    <p class="mono" id="check-status" role="status" hidden></p>
+
+    <dl class="report" id="check-report" aria-label="Install check report"></dl>
+    <ul class="report-notes" id="check-notes" aria-label="Install check notes"></ul>
+
+    <div class="cors-help" id="cors-help">
+      <p id="cors-message">Some sites do not allow a browser to read them from another domain (a security rule called CORS). That is a browser restriction, not a verdict on your install. Open your page, view its source, and paste the HTML below instead: the same check runs locally on the pasted text.</p>
+      <textarea class="code" id="f-check-html" spellcheck="false" placeholder="Paste your page HTML here" aria-label="Pasted page HTML"></textarea>
+      <div class="linkrow">
+        <button type="button" class="btn" id="run-check-html">Analyze pasted HTML</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="sheet">
+  <span class="mono">PlainConsent</span>
+  <span class="mono"><a href="index.html">plainconsent.com</a></span>
+</footer>
+
+<!-- Het echte product plus de pure hulpmodules. Paden kloppen binnen de
+     repo-structuur (site/ naast product/); bij publicatie worden ze
+     herschreven naar de gehoste dist/js-paden. -->
+<script src="dist/cookie-consent.v1.1.0.js"></script>
+<script src="js/config-generator.js"></script>
+<script src="js/install_check.js"></script>
+<script src="js/manage_state.js"></script>
+<script>
+  // Hosted embed-bron van de HUIDIGE release. Leeg = deze pagina draait
+  // vanaf de lokale werkkopie; bij publicatie worden src en sri ingevuld
+  // vanuit dist/manifest.json, zodat het snippet hieronder altijd de
+  // byte-gepinde versioned file aanwijst.
+  var PC_HOSTED = { src: 'https://plainconsent.com/dist/cookie-consent.v1.1.0.js', sri: 'sha384-irwxZlM0ttEvMHb7xlIbUzU5Y/f+vFkpRE4CqSBetpOFWeldbnHQSriGfrZHrBoX' };
+</script>
+<script>
+  (function () {
+    'use strict';
+
+    var CC = window.CookieConsent;
+    var GEN = window.CookieConsentConfigGen;
+    var IC = window.PlainConsentInstallCheck;
+    var MS = window.PlainConsentManageState;
+
+    function byId(id) { return document.getElementById(id); }
+    function val(id) { var n = byId(id); return n ? n.value : ''; }
+    function setVal(id, v) { var n = byId(id); if (n) n.value = v; }
+
+    if (!CC || !GEN || !IC || !MS) {
+      var missing = byId('product-missing');
+      if (missing) missing.hidden = false;
+      return;
+    }
+
+    var PREVIEW_COOKIE = 'pc_preview';
+    // Zonder ingevulde hosted release wijst het snippet naar de latest-alias
+    // (bewust zonder SRI: latest muteert per release, SRI pint bytes).
+    var FALLBACK_LATEST = 'https://plainconsent.com/dist/cookie-consent.latest.js';
+    var KNOWN_LOCALES = { en: 1, nl: 1, de: 1, es: 1, fr: 1 };
+
+    var PRESETS = {
+      'default': { locale: 'en', geo: 'always', accent: '#2563EB', bg: '#0D0D0D', text: '#FFFFFF' },
+      'dark': { locale: 'en', geo: 'always', accent: '#F59E0B', bg: '#111827', text: '#F9FAFB' },
+      'eu': { locale: 'en', geo: 'eu-only', accent: '#2563EB', bg: '#0D0D0D', text: '#FFFFFF' }
+    };
+
+    // ---------- form <-> state ----------
+
+    function readForm() {
+      return {
+        locale: val('f-locale'),
+        geo: val('f-geo'),
+        accent: val('f-accent'),
+        bg: val('f-bg'),
+        text: val('f-text'),
+        gtmId: val('f-gtm'),
+        ga4Id: val('f-ga4'),
+        privacyUrl: val('f-privacy'),
+        consentVersion: val('f-version')
+      };
+    }
+
+    function applyStateToForm(state) {
+      if (!state) return;
+      if (typeof state.locale === 'string' && KNOWN_LOCALES[state.locale.toLowerCase()]) {
+        setVal('f-locale', state.locale.toLowerCase());
+      }
+      if (state.geo === 'always' || state.geo === 'eu-only') setVal('f-geo', state.geo);
+      if (typeof state.accent === 'string') setVal('f-accent', state.accent);
+      if (typeof state.bg === 'string') setVal('f-bg', state.bg);
+      if (typeof state.text === 'string') setVal('f-text', state.text);
+      if (typeof state.gtmId === 'string') setVal('f-gtm', state.gtmId);
+      if (typeof state.ga4Id === 'string') setVal('f-ga4', state.ga4Id);
+      if (typeof state.privacyUrl === 'string') setVal('f-privacy', state.privacyUrl);
+      if (typeof state.consentVersion === 'string' && /^[0-9]+$/.test(state.consentVersion)) {
+        setVal('f-version', state.consentVersion);
+      }
+      syncPickers();
+    }
+
+    // Native color-pickers los in sync houden met de tekstvelden.
+    function linkColor(pickId, textId) {
+      var pick = byId(pickId), txt = byId(textId);
+      if (!pick || !txt) return;
+      pick.addEventListener('input', function () { txt.value = pick.value; scheduleUpdate(); });
+      txt.addEventListener('input', function () {
+        if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(txt.value)) { pick.value = txt.value; }
+      });
+    }
+    function syncPickers() {
+      var pairs = [['f-accent-pick', 'f-accent'], ['f-bg-pick', 'f-bg'], ['f-text-pick', 'f-text']];
+      for (var i = 0; i < pairs.length; i++) {
+        var pick = byId(pairs[i][0]), txt = byId(pairs[i][1]);
+        if (pick && txt && /^#([0-9a-fA-F]{6})$/.test(txt.value)) pick.value = txt.value;
+      }
+    }
+
+    // ---------- live preview: verwijder-en-herrender met het echte script ----------
+
+    function clearPreviewCookie() {
+      document.cookie = PREVIEW_COOKIE + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Lax';
+    }
+
+    /**
+     * Her-render de ECHTE banner in het preview-pane:
+     *   1. bestaand #cc-overlay en #cc-styles verwijderen (injectStyles is
+     *      idempotent, dus zonder deze stap zou een theme-wijziging nooit
+     *      doorwerken);
+     *   2. het preview-consent-cookie wissen zodat de banner altijd
+     *      opnieuw verschijnt;
+     *   3. het product opnieuw initialiseren met de nieuwe config en tonen;
+     *   4. de (fixed, full-screen) overlay het pane in verplaatsen; de
+     *      pagina-CSS zet hem daar absolute, geclipt door het pane.
+     * De preview draait bewust ZONDER gtmId/ga4Id (autoLoadGTM: false) zodat
+     * er nooit echte tags laden op deze pagina, en met geo 'always' zodat de
+     * eu-only-keuze de preview niet verbergt.
+     */
+    function renderPreview(cfg, locale) {
+      var overlay = document.getElementById('cc-overlay');
+      if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      var styles = document.getElementById('cc-styles');
+      if (styles && styles.parentNode) styles.parentNode.removeChild(styles);
+      clearPreviewCookie();
+
+      var previewCfg = {
+        autoLoadGTM: false,
+        consentCookieName: PREVIEW_COOKIE,
+        consentVersion: 1,
+        geo: 'always',
+        locale: KNOWN_LOCALES[locale] ? locale : 'en',
+        theme: cfg.theme
+      };
+      if (cfg.privacyUrl) previewCfg.privacyUrl = cfg.privacyUrl;
+
+      CC.init(previewCfg);
+      CC.show();
+
+      var ov = document.getElementById('cc-overlay');
+      var pane = byId('preview-pane');
+      if (ov && pane) pane.appendChild(ov);
+    }
+
+    // ---------- hash + snippet + warnings + preview in EEN update ----------
+
+    function renderWarnings(warnings) {
+      var list = byId('cfg-warnings');
+      if (!list) return;
+      while (list.firstChild) list.removeChild(list.firstChild);
+      for (var i = 0; i < warnings.length; i++) {
+        var li = document.createElement('li');
+        li.textContent = warnings[i];   // kan vijandige input echoen: textContent only
+        list.appendChild(li);
+      }
+      list.hidden = warnings.length === 0;
+    }
+
+    function update() {
+      var state = readForm();
+
+      // 1. config-in-URL: state naar de hash (replaceState: geen history-spam)
+      var encoded = MS.serializeState(state);
+      var newUrl = window.location.pathname + window.location.search + (encoded ? '#' + encoded : '');
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', newUrl);
+      } else {
+        window.location.hash = encoded;
+      }
+
+      // 2. gevalideerde config + embed-snippet (alle sanitization zit in de
+      //    pure functies; de textarea .value is inert)
+      var form = {
+        gtmId: state.gtmId,
+        ga4Id: state.ga4Id,
+        privacyUrl: state.privacyUrl,
+        consentVersion: state.consentVersion,
+        defaultLanguage: state.locale,
+        geo: state.geo,
+        accent: state.accent,
+        bg: state.bg,
+        text: state.text
+      };
+      var cfg = GEN.buildConfigObject(form);
+      var hostedOpts = PC_HOSTED.src
+        ? { hosted: { src: PC_HOSTED.src, sri: PC_HOSTED.sri } }
+        : { hosted: { src: FALLBACK_LATEST } };
+      setVal('out-embed', GEN.buildEmbedSnippet(cfg, hostedOpts));
+      renderWarnings(cfg.warnings || []);
+
+      // 3. eerlijkheidsnoot bij eu-only
+      var geoNote = byId('geo-note');
+      if (geoNote) geoNote.hidden = state.geo !== 'eu-only';
+
+      // 4. de echte banner opnieuw renderen
+      renderPreview(cfg, state.locale);
+    }
+
+    // Debounce: tekstvelden vuren per toetsaanslag; de her-render wacht even.
+    var updateTimer = null;
+    function scheduleUpdate() {
+      if (updateTimer !== null) clearTimeout(updateTimer);
+      updateTimer = setTimeout(function () { updateTimer = null; update(); }, 200);
+    }
+
+    // ---------- kopieren (clipboard API met execCommand-fallback, ES5) ----------
+
+    function flashCopied(flagId) {
+      var flag = byId(flagId);
+      if (!flag) return;
+      flag.hidden = false;
+      setTimeout(function () { flag.hidden = true; }, 1500);
+    }
+
+    function legacyCopy(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      return ok;
+    }
+
+    function copyText(text, flagId) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(
+          function () { flashCopied(flagId); },
+          function () { if (legacyCopy(text)) flashCopied(flagId); }
+        );
+      } else {
+        if (legacyCopy(text)) flashCopied(flagId);
+      }
+    }
+
+    // ---------- stap 3: install-check ----------
+
+    function setCheckStatus(msg) {
+      var status = byId('check-status');
+      if (!status) return;
+      status.textContent = msg;   // textContent only
+      status.hidden = !msg;
+    }
+
+    function reportRow(dl, label, value, tone) {
+      var row = document.createElement('div');
+      row.className = 'rrow';
+      var dt = document.createElement('dt');
+      dt.textContent = label;
+      var dd = document.createElement('dd');
+      dd.textContent = value;   // kan vijandige pagina-inhoud echoen: textContent only
+      if (tone) dd.className = tone;
+      row.appendChild(dt);
+      row.appendChild(dd);
+      dl.appendChild(row);
+    }
+
+    /**
+     * Toon het analyzeInstallation-rapport. Alle teksten worden hier in het
+     * Engels afgeleid uit de structurele velden van het rapport en via
+     * textContent gezet; er wordt nooit HTML uit de gecheckte pagina gerenderd.
+     */
+    function renderReport(report) {
+      setCheckStatus('');
+      var dl = byId('check-report');
+      var notes = byId('check-notes');
+      if (!dl || !notes) return;
+      while (dl.firstChild) dl.removeChild(dl.firstChild);
+      while (notes.firstChild) notes.removeChild(notes.firstChild);
+
+      reportRow(dl, 'Script found', report.scriptFound ? 'Yes' : 'No', report.scriptFound ? 'good' : 'bad');
+      if (report.scriptFound) {
+        reportRow(dl, 'Script src', report.scriptSrc || 'unknown');
+        var versionText;
+        if (report.versionDetected === 'latest') versionText = 'latest (moving alias, no byte pin)';
+        else if (report.versionDetected) versionText = report.versionDetected + ' (pinned release)';
+        else versionText = 'not versioned (plain cookie-consent.js)';
+        reportRow(dl, 'Version', versionText);
+        reportRow(dl, 'Integrity (SRI)', report.sriPresent ? 'present' : 'missing', report.sriPresent ? 'good' : 'bad');
+        var gtmText, gtmTone;
+        if (report.beforeGtm === true) { gtmText = 'Yes, consent defaults are set before GTM'; gtmTone = 'good'; }
+        else if (report.beforeGtm === false) { gtmText = 'No, the script loads after GTM'; gtmTone = 'bad'; }
+        else { gtmText = 'No GTM snippet found on the page, nothing to compare'; gtmTone = null; }
+        reportRow(dl, 'Loads before GTM', gtmText, gtmTone);
+      }
+      dl.style.display = 'block';
+
+      // Noten in mensentaal, afgeleid uit de structurele velden.
+      var messages = [];
+      if (!report.scriptFound) {
+        messages.push('No PlainConsent script tag was found on this page. Paste the snippet from step 2 just before the closing head tag.');
+      }
+      if (report.beforeGtm === false) {
+        messages.push('The PlainConsent script loads after the GTM snippet, so GTM starts without denied defaults. Move the consent script above GTM in the head.');
+      }
+      if (report.scriptFound && report.versionDetected && report.versionDetected !== 'latest' && !report.sriPresent) {
+        messages.push('The versioned script has no integrity attribute. Use the snippet from step 2 to get byte-pinned integrity.');
+      }
+      if (report.truncated) {
+        messages.push('The page is larger than 500 KB; only the first part was analyzed. The consent script belongs in the head, so this rarely matters.');
+      }
+      for (var i = 0; i < messages.length; i++) {
+        var li = document.createElement('li');
+        li.textContent = messages[i];
+        notes.appendChild(li);
+      }
+      notes.style.display = messages.length ? 'block' : 'none';
+    }
+
+    function showCorsHelp() {
+      var help = byId('cors-help');
+      if (help) help.style.display = 'block';
+    }
+
+    function runUrlCheck() {
+      var url = val('f-check-url').replace(/^\s+|\s+$/g, '');
+      if (!/^https?:\/\//i.test(url)) {
+        setCheckStatus('Enter a full address, starting with https://');
+        return;
+      }
+      if (typeof fetch !== 'function') {
+        showCorsHelp();
+        return;
+      }
+      setCheckStatus('Fetching the page in your browser...');
+      fetch(url, { mode: 'cors', credentials: 'omit' })
+        .then(function (res) { return res.text(); })
+        .then(
+          function (html) { renderReport(IC.analyzeInstallation(html)); },
+          function () {
+            setCheckStatus('Could not read that page from the browser (see below).');
+            showCorsHelp();
+          }
+        );
+    }
+
+    // ---------- wiring ----------
+
+    linkColor('f-accent-pick', 'f-accent');
+    linkColor('f-bg-pick', 'f-bg');
+    linkColor('f-text-pick', 'f-text');
+
+    var textFieldIds = ['f-accent', 'f-bg', 'f-text', 'f-gtm', 'f-ga4', 'f-privacy', 'f-version'];
+    for (var ti = 0; ti < textFieldIds.length; ti++) {
+      var node = byId(textFieldIds[ti]);
+      if (node) node.addEventListener('input', scheduleUpdate);
+    }
+    var selectIds = ['f-locale', 'f-geo'];
+    for (var si = 0; si < selectIds.length; si++) {
+      var sel = byId(selectIds[si]);
+      if (sel) sel.addEventListener('change', scheduleUpdate);
+    }
+
+    var presetButtons = document.querySelectorAll('[data-preset]');
+    for (var pi = 0; pi < presetButtons.length; pi++) {
+      (function (btn) {
+        btn.addEventListener('click', function () {
+          var preset = PRESETS[btn.getAttribute('data-preset')];
+          if (preset) { applyStateToForm(preset); update(); }
+        });
+      })(presetButtons[pi]);
+    }
+
+    byId('copy-link').addEventListener('click', function () {
+      copyText(window.location.href, 'copied-link');
+    });
+    byId('copy-embed').addEventListener('click', function () {
+      copyText(val('out-embed'), 'copied-embed');
+    });
+    byId('rerun-preview').addEventListener('click', update);
+    byId('run-check').addEventListener('click', runUrlCheck);
+    byId('run-check-html').addEventListener('click', function () {
+      renderReport(IC.analyzeInstallation(val('f-check-html')));
+    });
+    byId('f-check-url').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.keyCode === 13) runUrlCheck();
+    });
+
+    // ---------- init: hash inlezen, dan eerste render ----------
+
+    var initial = MS.deserializeState(window.location.hash);
+    if (initial) applyStateToForm(initial);
+    update();
+  })();
+</script>
+</body>
+</html>

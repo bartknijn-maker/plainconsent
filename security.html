@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How PlainConsent works, and why it is safe</title>
+<meta name="description" content="One small script, zero third-party calls, consent stored first-party, a provable audit trail, published source with SRI. How PlainConsent handles data.">
+<link rel="canonical" href="https://plainconsent.com/security.html">
+<link rel="alternate" hreflang="en" href="https://plainconsent.com/security.html">
+<link rel="alternate" hreflang="nl" href="https://plainconsent.com/nl/security.html">
+<link rel="alternate" hreflang="x-default" href="https://plainconsent.com/security.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--paper:#f7f3ec;--ink:#1b1712;--ink-soft:#5c5347;--rule:#d8cfc0;--stamp:#b3402a;--serif:"Fraunces",Georgia,serif;--mono:"IBM Plex Mono",ui-monospace,monospace}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--paper);color:var(--ink);font-family:var(--serif);font-weight:300;line-height:1.65;font-size:17px}
+  .sheet{max-width:760px;margin:0 auto;padding:0 28px}
+  header{padding:34px 0 0}
+  .masthead{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--ink);padding-bottom:14px}
+  .wordmark{font-weight:900;font-size:1.15rem;letter-spacing:-.01em}
+  .wordmark span{color:var(--stamp)}
+  nav a{color:var(--ink-soft);text-decoration:none;font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;margin-left:20px}
+  nav a:hover{color:var(--stamp)}
+  main{padding:56px 0}
+  .kicker{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+  h1{font-weight:900;font-size:clamp(2rem,5vw,3.2rem);letter-spacing:-.02em;line-height:1.05;margin:8px 0 22px}
+  h2{font-weight:600;font-size:1.35rem;margin:40px 0 10px;letter-spacing:-.01em}
+  p{margin:0 0 16px;color:var(--ink-soft)}
+  p strong{color:var(--ink);font-weight:600}
+  a{color:var(--stamp)}
+  .cta{margin-top:40px}
+  .btn{font-family:var(--mono);font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;padding:14px 24px;border:1.5px solid var(--stamp);background:var(--stamp);color:var(--paper);text-decoration:none;transition:all .18s ease}
+  .btn:hover{background:var(--ink);border-color:var(--ink)}
+  footer{border-top:1px solid var(--ink);margin-top:48px;padding:26px 0 50px;font-family:var(--mono);font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);display:flex;gap:16px;flex-wrap:wrap}
+  footer a{color:var(--ink-soft);text-decoration:none}footer a:hover{color:var(--stamp)}
+</style>
+</head>
+<body>
+<header class="sheet">
+  <div class="masthead">
+    <div class="wordmark"><a href="index.html" style="text-decoration:none;color:inherit">Plain<span>Consent</span></a></div>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="vs-cookiebot.html">vs Cookiebot</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="nl/security.html">NL</a>
+    </nav>
+  </div>
+</header>
+
+<main class="sheet">
+  <span class="kicker">How it works &amp; security</span>
+  <h1>Small tool, nothing hidden.</h1>
+
+  <h2>One script, published in the open</h2>
+  <p>PlainConsent is a single small script. Its source code is published, so anyone (you, your developer, a regulator) can read exactly what runs in your visitors' browsers. There is nothing to take on trust.</p>
+
+  <h2>Zero third-party calls</h2>
+  <p>The script does not phone home. It calls no server of ours and no server of anyone else. Your visitors' data never leaves your page to ask whether it may be collected. A consent tool that tracks people would be the very thing it is meant to prevent; <strong>this one does not</strong>.</p>
+
+  <h2>Consent is stored where it belongs: with you</h2>
+  <p>Each visitor's choice is saved in a first-party cookie on your own domain. By default that record never reaches us.</p>
+
+  <h2>Proof you can hold</h2>
+  <p>Every fresh decision gets a unique consent ID and a standardised audit record: the ID, a timestamp, the policy version, and the choice per category. You can log that to your own endpoint, so if a regulator asks, you have the receipts. <strong>GDPR Article 7 puts the burden of proof on you, so we make the proof easy to keep.</strong></p>
+
+  <h2>Tracking stays off until consent</h2>
+  <p>Through Google Consent Mode v2, tracking defaults to "denied" before anything loads. Nothing fires until your visitor agrees.</p>
+
+  <h2>Built like it matters</h2>
+  <p>Every release goes through an automated test suite, an independent security review, and a mechanical quality check before it is published. Versioned files are byte-pinned with Subresource Integrity (SRI), so the code you approved cannot be swapped for something else without detection.</p>
+
+  <h2>You can host it yourself</h2>
+  <p>Load the script from us over HTTPS, or self-host it on your own domain. Self-hosting means not a single byte of visitor data touches our infrastructure.</p>
+
+  <div class="cta"><a class="btn" href="index.html#access">Get early access</a></div>
+</main>
+
+<footer class="sheet">
+  <a href="index.html">PlainConsent</a>
+  <a href="vs-cookiebot.html">vs Cookiebot</a>
+  <a href="security.html">How it works</a>
+  <a href="privacy.html">Privacy</a>
+  <a href="nl/security.html">NL</a>
+</footer>
+</body>
+</html>

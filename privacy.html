@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- DRAFT: review with a data-protection lawyer and confirm the actual tools (analytics, payments, email) before deploying. Source: legal/privacy-policy.md -->
+<title>Privacy Policy — PlainConsent</title>
+<meta name="description" content="How PlainConsent handles data on plainconsent.com and in the product. Built to collect as little as possible.">
+<link rel="canonical" href="https://plainconsent.com/privacy.html">
+<link rel="alternate" hreflang="en" href="https://plainconsent.com/privacy.html">
+<link rel="alternate" hreflang="nl" href="https://plainconsent.com/nl/privacy.html">
+<link rel="alternate" hreflang="x-default" href="https://plainconsent.com/privacy.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--paper:#f7f3ec;--ink:#1b1712;--ink-soft:#5c5347;--rule:#d8cfc0;--stamp:#b3402a;--serif:"Fraunces",Georgia,serif;--mono:"IBM Plex Mono",ui-monospace,monospace}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--paper);color:var(--ink);font-family:var(--serif);font-weight:300;line-height:1.65;font-size:17px}
+  .sheet{max-width:720px;margin:0 auto;padding:0 28px}
+  header{padding:34px 0 0}
+  .masthead{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--ink);padding-bottom:14px}
+  .wordmark{font-weight:900;font-size:1.15rem;letter-spacing:-.01em}
+  .wordmark span{color:var(--stamp)}
+  nav a{color:var(--ink-soft);text-decoration:none;font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;margin-left:20px}
+  nav a:hover{color:var(--stamp)}
+  main{padding:56px 0}
+  .kicker{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+  h1{font-weight:900;font-size:clamp(1.9rem,5vw,3rem);letter-spacing:-.02em;line-height:1.05;margin:8px 0 10px}
+  .updated{font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:24px}
+  h2{font-weight:600;font-size:1.3rem;margin:38px 0 10px;letter-spacing:-.01em}
+  p{margin:0 0 16px;color:var(--ink-soft)}
+  p strong{color:var(--ink);font-weight:600}
+  ul{margin:0 0 16px 20px}li{margin:8px 0;color:var(--ink-soft)}
+  a{color:var(--stamp)}
+  footer{border-top:1px solid var(--ink);margin-top:48px;padding:26px 0 50px;font-family:var(--mono);font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);display:flex;gap:16px;flex-wrap:wrap}
+  footer a{color:var(--ink-soft);text-decoration:none}footer a:hover{color:var(--stamp)}
+</style>
+</head>
+<body>
+<header class="sheet">
+  <div class="masthead">
+    <div class="wordmark"><a href="index.html" style="text-decoration:none;color:inherit">Plain<span>Consent</span></a></div>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="security.html">How it works</a>
+      <a href="vs-cookiebot.html">vs Cookiebot</a>
+      <a href="nl/privacy.html">NL</a>
+    </nav>
+  </div>
+</header>
+
+<main class="sheet">
+  <span class="kicker">Privacy Policy</span>
+  <h1>What we collect, in plain sight.</h1>
+  <p class="updated">Last updated: 9 July 2026</p>
+
+  <p><strong>Who we are.</strong> PlainConsent is a cookie consent product made by Bart Knijnenberg, the Netherlands. For anything in this policy, contact <a href="mailto:info@bartknijnenberg.com">info@bartknijnenberg.com</a>. This policy covers the website plainconsent.com and the PlainConsent script.</p>
+
+  <p><strong>The short version.</strong> PlainConsent is built to collect as little as possible. The website is a set of static pages. The consent script itself makes zero third-party calls and stores each visitor's choice in a first-party cookie on the website that uses it, so that data does not come to us.</p>
+
+  <h2>What we process on plainconsent.com</h2>
+  <ul>
+    <li><strong>Server and CDN logs.</strong> When your browser loads a page or the script, our hosting/CDN provider records the request (IP address, user-agent, timestamp). We use this to deliver the files and keep the service secure. For these delivery logs PlainConsent is the controller (not a processor acting for the website owner). Legal basis: our legitimate interest in security and delivery.</li>
+    <li><strong>If you contact us.</strong> Your email address and message. Legal basis: legitimate interest in answering you, or steps prior to a contract.</li>
+    <li><strong>If you start a trial or subscribe.</strong> Billing details are handled by our payment provider (Stripe); we receive the information needed to manage your subscription. Legal basis: performance of a contract.</li>
+    <li><strong>Cookies on this site.</strong> plainconsent.com uses its own consent banner. Non-essential cookies load only after you agree; your choice is stored in a first-party cookie.</li>
+  </ul>
+
+  <h2>What the PlainConsent script does with visitor data</h2>
+  <p>Nothing leaves the page by default. The consent choice is stored in a first-party cookie on the customer's own domain. An audit record (a unique consent ID, timestamp, version and the per-category choices) is created only for the website owner and is sent only to an endpoint they choose. There is an optional hosted consent log; where a customer switches it on, we process those consent records as a processor on their behalf, under a Data Processing Agreement.</p>
+
+  <h2>Recipients and sub-processors</h2>
+  <p>Hosting and delivery (GitHub Pages and its CDN), payments (Stripe), and email (ImprovMX and Google for info@bartknijnenberg.com). Some of these are outside the EEA; such transfers rely on appropriate safeguards (Standard Contractual Clauses or an adequacy decision).</p>
+
+  <h2>Retention</h2>
+  <p>Logs are kept only as long as needed for security and then deleted or aggregated. Contact emails are kept as long as needed to help you. Billing data is kept for as long as the law requires.</p>
+
+  <h2>Your rights</h2>
+  <p>You can ask for access, correction, deletion, restriction, objection and portability, and you can withdraw consent at any time. Email <a href="mailto:info@bartknijnenberg.com">info@bartknijnenberg.com</a>. You may also complain to the Dutch supervisory authority, the Autoriteit Persoonsgegevens.</p>
+
+  <h2>Changes</h2>
+  <p>We will update this page when the product or our tools change, with a new date at the top.</p>
+</main>
+
+<footer class="sheet">
+  <a href="index.html">PlainConsent</a>
+  <a href="vs-cookiebot.html">vs Cookiebot</a>
+  <a href="security.html">How it works</a>
+  <a href="privacy.html">Privacy</a>
+  <a href="nl/privacy.html">NL</a>
+</footer>
+</body>
+</html>

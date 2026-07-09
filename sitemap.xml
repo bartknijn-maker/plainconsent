@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://plainconsent.com/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://plainconsent.com/"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://plainconsent.com/nl/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://plainconsent.com/"/>
+  </url>
+  <url>
+    <loc>https://plainconsent.com/nl/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://plainconsent.com/"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://plainconsent.com/nl/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://plainconsent.com/"/>
+  </url>
+  <url>
+    <loc>https://plainconsent.com/vs-cookiebot.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://plainconsent.com/vs-cookiebot.html"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://plainconsent.com/nl/vs-cookiebot.html"/>
+  </url>
+  <url>
+    <loc>https://plainconsent.com/nl/vs-cookiebot.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://plainconsent.com/vs-cookiebot.html"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://plainconsent.com/nl/vs-cookiebot.html"/>
+  </url>
+  <url>
+    <loc>https://plainconsent.com/security.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://plainconsent.com/security.html"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://plainconsent.com/nl/security.html"/>
+  </url>
+  <url>
+    <loc>https://plainconsent.com/nl/security.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://plainconsent.com/security.html"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://plainconsent.com/nl/security.html"/>
+  </url>
+  <url>
+    <loc>https://plainconsent.com/privacy.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://plainconsent.com/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://plainconsent.com/nl/privacy.html"/>
+  </url>
+  <url>
+    <loc>https://plainconsent.com/nl/privacy.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://plainconsent.com/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://plainconsent.com/nl/privacy.html"/>
+  </url>
+  <url>
+    <loc>https://plainconsent.com/manage.html</loc>
+  </url>
+</urlset>
